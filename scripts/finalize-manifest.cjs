@@ -16,6 +16,7 @@ entries[0].world = "MAIN"
 fs.writeFileSync(manifestPath, JSON.stringify(manifest))
 // Keep the local font's redistribution license with every production/dev bundle.
 fs.copyFileSync(path.resolve(__dirname, "../assets/branding/Pretendard-OFL.txt"), path.join(path.dirname(manifestPath), "Pretendard-OFL.txt"))
+for (const notice of ["LICENSE", "THIRD_PARTY_NOTICES.md"]) fs.copyFileSync(path.resolve(__dirname, "..", notice), path.join(path.dirname(manifestPath), notice))
 console.log("Static MAIN-world submission observer registered; permissions unchanged.")
 }
 module.exports = finalize

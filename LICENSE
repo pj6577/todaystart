@@ -1,0 +1,90 @@
+TodayStart Personal Use Source License 1.0
+
+Copyright (c) 2026 PARK JAEHYEON (pj6577).
+All rights reserved except for the permissions expressly granted below.
+
+1. Scope
+
+This license applies to the original TodayStart source code, documentation and
+original assets owned by the copyright holder in this repository (the Software).
+Third-party software, fonts, logos and other third-party material are excluded;
+their owners' terms continue to apply. See THIRD_PARTY_NOTICES.md.
+
+This is a source-available, personal-use license. It is not an open-source
+license and does not grant unrestricted reuse or redistribution rights.
+
+2. Permitted personal use
+
+You may inspect and study the Software, make private copies, build and run it on
+devices you control for your own job search, learning or evaluation, and make
+private modifications for those purposes. Keep the copyright, license and
+third-party notices with your copies. These permissions are non-exclusive and
+may not be sublicensed.
+
+You may submit a proposed contribution to the official TodayStart repository.
+Unless separately agreed in writing, your contribution must be offered under
+this same license, and you must have authority to make that contribution.
+Submitting a contribution does not transfer your copyright.
+
+3. Redistribution and services require separate permission
+
+Prior written permission from the copyright holder is required to distribute,
+sell, sublicense, relicense, mirror or publish the Software or a modified version
+outside the hosting-platform exception in section 5. This includes source
+archives, compiled extension packages, extension-store uploads and bundled
+products. Commercial use, operating a hosted service, or processing another
+person's data using the Software also requires prior written permission.
+
+A public repository, a downloadable source archive, an issue, an unanswered
+permission request, or the availability of an official release is not such
+written permission. Permission requests may be directed to the maintainer at
+https://github.com/pj6577/todaystart. Do not include personal records or secrets.
+
+4. Personal-data boundary
+
+The personal-use permission does not authorize adding or using functionality
+that sends a person's application history, career records, notes, calendar data,
+resume content, account identifiers or authentication information to a developer,
+operator, analytics provider, advertising provider or other third-party collector.
+Hidden telemetry, remote harvesting and resale of those data are not permitted
+under this license. Any broader use requires a separate written agreement that
+expressly addresses the proposed data processing; consent alone does not expand
+the permissions granted by this license.
+
+This condition does not prohibit retrieving your own information directly from
+the recruiting platform to which it belongs, keeping it locally, navigating to
+a link you choose, or exporting your own data to a file you control. It does not
+grant access to somebody else's account or override any platform's terms.
+
+5. Hosting-platform exception
+
+Rights necessarily granted by the terms of the platform on which the copyright
+holder hosts the repository, including GitHub's applicable rights to view and
+fork a public repository on GitHub, are not withdrawn by this license. This
+exception does not grant permission to distribute installable builds, operate a
+service, publish an independent mirror elsewhere, or offer a fork under a
+different license. Applicable statutory rights and exceptions are unaffected.
+
+6. Names and third-party rights
+
+No permission is granted to claim official status, endorsement or affiliation,
+or to use the copyright holder's name, product identity or marks to suggest it.
+No third-party copyright, trademark or patent rights are granted by this license.
+Third-party materials remain subject to their own applicable terms.
+
+7. Breach and retained rights
+
+The permissions granted in section 2 end if you violate these conditions. No
+other rights are granted by implication. Uses outside these permissions require
+a separate written agreement with the copyright holder.
+
+8. No warranty
+
+The Software is supplied as-is, without a promise that it is accurate, secure,
+fit for a particular purpose or free of defects. To the extent permitted by
+applicable law, the copyright holder and contributors accept no liability for
+losses arising from use of the Software. Mandatory legal protections remain
+unaffected.
+
+The English text in this file is the license. Summaries in documentation are
+provided for convenience and do not replace it.
