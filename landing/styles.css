@@ -435,11 +435,6 @@ p {
   flex: none;
   object-fit: contain;
 }
-.hero-note {
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 17px;
-}
 .product-stage {
   position: relative;
   isolation: isolate;
@@ -913,10 +908,6 @@ p {
   .hero-actions .text-link {
     font-size: 13px;
     min-height: 32px;
-  }
-  .hero-note {
-    font-size: 10px;
-    margin-top: 12px;
   }
   .product-stage {
     margin-top: 32px;
@@ -1753,12 +1744,6 @@ p {
   color: var(--muted);
   margin-top: 3px;
 }
-.features-footnote {
-  font-size: 11px;
-  line-height: 1.8;
-  color: var(--muted);
-  margin-top: 23px;
-}
 .supported-platforms {
   margin-top: 45px;
 }
@@ -1839,13 +1824,6 @@ p {
   margin-top: 5px;
   word-break: keep-all;
 }
-.supported-note {
-  font-size: 11px;
-  color: var(--muted);
-  line-height: 1.8;
-  margin-top: 20px;
-  max-width: 850px;
-}
 .future-platforms {
   border-top: 1px solid var(--line);
   padding-top: 36px;
@@ -1871,12 +1849,6 @@ p {
   font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
-}
-.future-description {
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.8;
-  margin-top: 13px;
 }
 .future-grid {
   list-style: none;
@@ -2306,10 +2278,6 @@ p {
   .art-event div > span {
     font-size: 8px;
   }
-  .features-footnote {
-    font-size: 10px;
-    margin-top: 18px;
-  }
   .supported-platforms {
     margin-top: 32px;
   }
@@ -2359,10 +2327,6 @@ p {
     font-size: 9px;
     line-height: 1.85;
   }
-  .supported-note {
-    font-size: 10px;
-    margin-top: 17px;
-  }
   .future-platforms {
     padding-top: 28px;
     margin-top: 28px;
@@ -2381,10 +2345,6 @@ p {
   .future-state {
     font-size: 9px;
     margin-top: 3px;
-  }
-  .future-description {
-    font-size: 11px;
-    margin-top: 12px;
   }
   .future-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
