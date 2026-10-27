@@ -6,12 +6,11 @@ on:
     paths:
       - "landing/**"
       - "scripts/build-landing.cjs"
+      - "src/style.css"
       - "assets/icon.svg"
+      - "assets/platforms/*-symbol.png"
       - "assets/branding/SUIT-Variable.woff2"
       - "assets/branding/SUIT-OFL.txt"
-      - "docs/images/dashboard.png"
-      - "docs/images/cross-site-warning.png"
-      - "docs/images/notes.png"
       - "LICENSE"
       - "THIRD_PARTY_NOTICES.md"
       - ".github/workflows/pages.yml"
@@ -20,12 +19,11 @@ on:
     paths:
       - "landing/**"
       - "scripts/build-landing.cjs"
+      - "src/style.css"
       - "assets/icon.svg"
+      - "assets/platforms/*-symbol.png"
       - "assets/branding/SUIT-Variable.woff2"
       - "assets/branding/SUIT-OFL.txt"
-      - "docs/images/dashboard.png"
-      - "docs/images/cross-site-warning.png"
-      - "docs/images/notes.png"
       - "LICENSE"
       - "THIRD_PARTY_NOTICES.md"
       - ".github/workflows/pages.yml"
@@ -55,6 +53,7 @@ jobs:
       - name: Build static landing page
         run: |
           node --check landing/main.js
+          node --check landing/theme.js
           node scripts/build-landing.cjs
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request'

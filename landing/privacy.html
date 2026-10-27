@@ -1,10 +1,11 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-theme="dark" data-theme-mode="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light" />
-    <meta name="theme-color" content="#f7f8fa" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#09090b" />
+    <script src="./theme.js"></script>
     <meta
       name="description"
       content="오늘시작 확장 프로그램의 로컬 저장 방식과 소개 페이지의 개인정보 처리 범위를 안내합니다."
@@ -19,7 +20,33 @@
     <header class="site-header glass">
       <a class="brand" href="./"
         ><img src="./assets/icon.svg" width="34" height="34" alt="" /><span>오늘시작</span></a
-      ><a class="text-link" href="./">소개 페이지로 <span aria-hidden="true">↗</span></a>
+      >
+      <div class="header-actions">
+        <label class="theme-control" hidden>
+          <span class="sr-only">화면 모드</span>
+          <svg class="theme-symbol theme-system" aria-hidden="true" viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="13" rx="2" />
+            <path d="M8 21h8m-4-4v4" />
+          </svg>
+          <svg class="theme-symbol theme-dark" aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M20.8 13A9 9 0 0 1 11 3.2 9 9 0 1 0 20.8 13Z" />
+          </svg>
+          <svg class="theme-symbol theme-light" aria-hidden="true" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="4" />
+            <path
+              d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"
+            />
+          </svg>
+          <select data-theme-select>
+            <option value="system">시스템</option>
+            <option value="dark" selected>다크</option>
+            <option value="light">화이트</option>
+          </select>
+        </label>
+        <a class="text-link privacy-home-link" href="./"
+          >소개 페이지로 <span aria-hidden="true">↗</span></a
+        >
+      </div>
     </header>
     <main id="main" class="document-main section-shell">
       <article class="document-card glass">
@@ -56,9 +83,14 @@
         </p>
         <h2>소개 페이지에는 방문자 분석을 넣지 않았습니다</h2>
         <p>
-          이 페이지는 정적 파일로 제공하며, 개발자가 별도로 운영하는 분석 도구·광고 추적·입력
-          폼·브라우저 저장 기능을 포함하지 않습니다. 서체와 화면 이미지는 같은 사이트에서
-          제공합니다. 이 페이지는 설치된 확장 프로그램의 지원 기록이나 메모를 읽지 않습니다.
+          이 페이지는 정적 파일로 제공하며, 개발자가 별도로 운영하는 분석 도구·광고 추적·입력 폼을
+          포함하지 않습니다. 서체와 화면 이미지는 같은 사이트에서 제공합니다. 이 페이지는 설치된
+          확장 프로그램의 지원 기록이나 메모를 읽지 않습니다.
+        </p>
+        <p>
+          화면 모드를 선택하면 이 사이트의 브라우저 로컬 저장소에 <code>system</code>,
+          <code>dark</code>, <code>light</code> 중 선택값 하나만 기억합니다. 이 값은 외부로 전송하지
+          않으며, 저장을 차단한 환경에서도 현재 페이지의 모드 선택은 동작합니다.
         </p>
         <div class="document-callout">
           <p>

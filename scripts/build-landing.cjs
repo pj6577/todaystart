@@ -2,6 +2,34 @@ const fs = require("node:fs")
 const path = require("node:path")
 
 const root = path.resolve(__dirname, "..")
+// Keep the public page's dark surfaces and text aligned with the actual app.
+function cssVariables(file, selector) {
+  const source = fs.readFileSync(path.join(root, file), "utf8")
+  const start = source.indexOf(selector + " {")
+  if (start < 0) throw new Error(`Missing CSS theme: ${file} ${selector}`)
+  const block = source.slice(start, source.indexOf("}", start))
+  return Object.fromEntries(
+    [...block.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((match) => [match[1], match[2].trim()])
+  )
+}
+const appColors = {
+  ...cssVariables("src/style.css", ":root"),
+  ...cssVariables("src/style.css", ':root[data-theme="dark"]')
+}
+const pageColors = cssVariables("landing/styles.css", ':root[data-theme="dark"]')
+for (const [page, app] of Object.entries({
+  "--page": "--bg",
+  "--ink": "--text",
+  "--secondary": "--text-secondary",
+  "--muted": "--text-muted",
+  "--surface": "--surface",
+  "--line": "--border",
+  "--surface-selected": "--selected",
+  "--blue": "--accent",
+  "--quiet-button": "--accent"
+})) {
+  if (pageColors[page] !== appColors[app]) throw new Error(`Dark palette differs from app: ${page}`)
+}
 const destination = path.resolve(root, "build", "landing")
 if (destination !== path.join(root, "build", "landing") || !destination.startsWith(root + path.sep))
   throw new Error("Unexpected landing output directory")
@@ -13,12 +41,21 @@ const files = [
   ["landing/privacy.html", "privacy.html"],
   ["landing/styles.css", "styles.css"],
   ["landing/main.js", "main.js"],
+  ["landing/theme.js", "theme.js"],
+  ["landing/assets/chrome.svg", "assets/chrome.svg"],
   ["assets/icon.svg", "assets/icon.svg"],
+  ...["saramin", "jobkorea", "wanted", "remember"].map((platform) => [
+    `assets/platforms/${platform}-symbol.png`,
+    `assets/${platform}-symbol.png`
+  ]),
   ["assets/branding/SUIT-Variable.woff2", "assets/SUIT-Variable.woff2"],
   ["assets/branding/SUIT-OFL.txt", "assets/SUIT-OFL.txt"],
-  ["docs/images/dashboard.png", "assets/dashboard.png"],
-  ["docs/images/cross-site-warning.png", "assets/cross-site-warning.png"],
-  ["docs/images/notes.png", "assets/notes.png"],
+  ...["dashboard", "warning", "notes"].flatMap((screen) =>
+    ["light", "dark"].map((theme) => [
+      `landing/assets/screens/${screen}-${theme}.png`,
+      `assets/${screen}-${theme}.png`
+    ])
+  ),
   ["LICENSE", "LICENSE"],
   ["THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES.md"]
 ]

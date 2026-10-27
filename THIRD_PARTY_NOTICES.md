@@ -15,7 +15,7 @@ Dexie, React, Plasmo, Fuse.js, Zod와 그 밖의 의존성은 각 패키지의 �
 | Geist Mono | [GeistMono-OFL.txt](assets/branding/GeistMono-OFL.txt) |
 | SUIT | [SUIT-OFL.txt](assets/branding/SUIT-OFL.txt) |
 
-각 서체의 SIL Open Font License와 저작권·Reserved Font Name 조건이 별도로 적용됩니다. 앱에서 사용하는 Pretendard의 고지를 빌드에 함께 넣습니다. 다른 서체는 제작 자료용 원본입니다.
+각 서체의 SIL Open Font License와 저작권·Reserved Font Name 조건이 별도로 적용됩니다. 확장 프로그램에서 사용하는 Pretendard, 소개 페이지에서 사용하는 SUIT의 고지를 각각의 빌드에 함께 넣습니다. 나머지 서체는 제작 자료용 원본입니다.
 
 ## 플랫폼 이름·로고와 Discord
 
@@ -26,6 +26,7 @@ Dexie, React, Plasmo, Fuse.js, Zod와 그 밖의 의존성은 각 패키지의 �
 - [원티드 브랜드센터](https://www.wanted.co.kr/brandcenter/)에는 로고 형태·색상·여백 등의 가이드가 있습니다.
 - [리멤버 로고 가이드](https://static.rememberapp.co.kr/brand/brand_guideline_logo.pdf)는 원본 형태와 활용 규정을 설명합니다.
 - Discord 심벌은 [공식 브랜드 안내](https://discord.com/branding)에 따라 커뮤니티 링크를 식별하는 데 사용합니다. 프로젝트 라이선스로 재허락하지 않습니다.
+- 소개 페이지의 컬러 Chrome 아이콘은 [Google 공식 Chrome 페이지](https://www.google.com/chrome/)에서 제공하는 [SVG](https://www.google.com/chrome/static/images/chrome-logo-m100.svg) 원본을 사용합니다. 설치 대상 브라우저를 식별하며, Google의 공식 제휴나 보증을 뜻하지 않습니다. Google의 자산을 프로젝트 라이선스로 재허락하지 않습니다.
 
 브랜드 가이드는 해당 권리자가 제공하는 사용 지침이며, 이 문서는 모든 제3자 자산에 대한 포괄적 재배포 허가를 확인했다는 선언이 아닙니다. 현재 저장소의 이용 조건과 제3자 권리자의 적용 조건을 함께 따라야 합니다.
 

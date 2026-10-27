@@ -1,0 +1,18 @@
+{
+  "extensionVersion": "0.9.3",
+  "capturedAt": "2026-10-27T10:25:46.352Z",
+  "clock": "2026-10-27T01:00:00.000Z",
+  "dataset": "fictional",
+  "account": "temporary isolated profile",
+  "network": "recruiting requests mocked locally",
+  "captures": [
+    "warning-light.png",
+    "dashboard-light.png",
+    "notes-light.png",
+    "calendar-light.png",
+    "warning-dark.png",
+    "dashboard-dark.png",
+    "notes-dark.png",
+    "calendar-dark.png"
+  ]
+}
