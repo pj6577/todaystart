@@ -2,6 +2,7 @@
 ;(() => {
   const key = "todaystart-landing-theme"
   const modes = new Set(["system", "dark", "light"])
+  const labels = { system: "시스템", dark: "다크", light: "화이트" }
   const system = window.matchMedia("(prefers-color-scheme: dark)")
   let mode = "dark"
   try {
@@ -18,6 +19,7 @@
     if (color) color.content = theme === "dark" ? "#09090b" : "#ffffff"
     document.querySelectorAll("[data-theme-select]").forEach((select) => {
       select.value = mode
+      select.closest(".theme-control").title = `화면 모드: ${labels[mode]}`
     })
   }
   apply()
@@ -31,7 +33,6 @@
   })
   document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("[data-theme-select]").forEach((select) => {
-      select.value = mode
       select.closest(".theme-control").hidden = false
       select.addEventListener("change", () => {
         if (!modes.has(select.value)) return
@@ -44,5 +45,6 @@
         }
       })
     })
+    apply()
   })
 })()
