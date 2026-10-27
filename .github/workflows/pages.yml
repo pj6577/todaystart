@@ -52,7 +52,6 @@ jobs:
           package-manager-cache: false
       - name: Build static landing page
         run: |
-          node --check landing/main.js
           node --check landing/theme.js
           node scripts/build-landing.cjs
       - name: Upload Pages artifact

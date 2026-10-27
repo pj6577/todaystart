@@ -24,6 +24,7 @@ for (const [page, app] of Object.entries({
   "--muted": "--text-muted",
   "--surface": "--surface",
   "--line": "--border",
+  "--illustration-line": "--border-strong",
   "--surface-selected": "--selected",
   "--blue": "--accent",
   "--quiet-button": "--accent"
@@ -40,22 +41,35 @@ const files = [
   ["landing/index.html", "index.html"],
   ["landing/privacy.html", "privacy.html"],
   ["landing/styles.css", "styles.css"],
-  ["landing/main.js", "main.js"],
   ["landing/theme.js", "theme.js"],
   ["landing/assets/chrome.svg", "assets/chrome.svg"],
   ["assets/icon.svg", "assets/icon.svg"],
-  ...["saramin", "jobkorea", "wanted", "remember"].map((platform) => [
-    `assets/platforms/${platform}-symbol.png`,
-    `assets/${platform}-symbol.png`
-  ]),
+  ...[
+    "saramin",
+    "jobkorea",
+    "wanted",
+    "remember",
+    "jumpit",
+    "rallit",
+    "programmers",
+    "rocketpunch",
+    "jobplanet",
+    "incruit",
+    "catch",
+    "jobda",
+    "career",
+    "work24",
+    "albamon",
+    "alba",
+    "linkareer",
+    "gamejob"
+  ].map((platform) => [`assets/platforms/${platform}-symbol.png`, `assets/${platform}-symbol.png`]),
   ["assets/branding/SUIT-Variable.woff2", "assets/SUIT-Variable.woff2"],
   ["assets/branding/SUIT-OFL.txt", "assets/SUIT-OFL.txt"],
-  ...["dashboard", "warning", "notes"].flatMap((screen) =>
-    ["light", "dark"].map((theme) => [
-      `landing/assets/screens/${screen}-${theme}.png`,
-      `assets/${screen}-${theme}.png`
-    ])
-  ),
+  ...["light", "dark"].map((theme) => [
+    `landing/assets/screens/dashboard-${theme}.png`,
+    `assets/dashboard-${theme}.png`
+  ]),
   ["LICENSE", "LICENSE"],
   ["THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES.md"]
 ]
