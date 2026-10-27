@@ -1,0 +1,75 @@
+{
+  "name": "todaystart",
+  "displayName": "오늘시작",
+  "version": "0.9.3",
+  "private": true,
+  "description": "사람인, 잡코리아, 원티드, 리멤버의 지원 기록을 모아 중복 지원을 확인하고, 메모와 취업 일정을 함께 관리하세요.",
+  "scripts": {
+    "dev": "node scripts/plasmo.cjs dev",
+    "build": "node scripts/plasmo.cjs build",
+    "package": "node scripts/finalize-manifest.cjs && plasmo package",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "check": "npm run typecheck && npm test && npm run build && npm run test:e2e",
+    "demo": "npm run build && node scripts/demo.cjs"
+  },
+  "dependencies": {
+    "dexie": "^4.4.6",
+    "fuse.js": "^7.5.0",
+    "plasmo": "0.90.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "3.24.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/chrome": "^0.1.38",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.20",
+    "fake-indexeddb": "^6.0.0",
+    "jsdom": "^26.1.0",
+    "postcss": "^8.5.0",
+    "sharp": "0.33.5",
+    "svgo": "3.3.2",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  },
+  "manifest": {
+    "name": "오늘시작",
+    "short_name": "오늘시작",
+    "permissions": [
+      "storage",
+      "activeTab"
+    ],
+    "content_scripts": [
+      {
+        "matches": [
+          "https://www.saramin.co.kr/zf_user/member/apply*",
+          "https://www.jobkorea.co.kr/Recruit/OnPass*",
+          "https://www.jobkorea.co.kr/Recruit/GI_Read/*",
+          "https://www.jobkorea.co.kr/Search*",
+          "https://www.jobkorea.co.kr/Recruit/JobList*"
+        ],
+        "js": [
+          "../src/submission/main.ts"
+        ],
+        "all_frames": true,
+        "run_at": "document_start"
+      }
+    ],
+    "host_permissions": [
+      "https://www.saramin.co.kr/*",
+      "https://www.jobkorea.co.kr/*",
+      "https://www.wanted.co.kr/*",
+      "https://profile.rememberapp.co.kr/*",
+      "https://career.rememberapp.co.kr/*"
+    ],
+    "minimum_chrome_version": "114",
+    "offline_enabled": true
+  }
+}

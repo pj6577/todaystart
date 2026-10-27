@@ -1,0 +1,37 @@
+{
+  "platform": "jobkorea",
+  "version": "fixture-only-v1",
+  "validatedAt": "TEST FIXTURE ONLY - NOT LIVE DOM",
+  "historyPaths": ["/__todaystart/history"],
+  "listingPaths": ["/__todaystart/jobs"],
+  "detailPaths": ["/__todaystart/detail"],
+  "historyRoot": "#j-applications",
+  "historyRow": "tr.j-row",
+  "historyFields": {
+    "company": {"selector": "[data-field=company]"},
+    "title": {"selector": "[data-field=job]"},
+    "url": {"selector": "[data-field=job]", "attribute": "href"},
+    "date": {"selector": "[data-field=date]"},
+    "status": {"selector": "[data-field=status]"},
+    "applicationId": {"selector": ":scope", "attribute": "data-application"},
+    "jobId": {"selector": ":scope", "attribute": "data-job"}
+  },
+  "listingRoot": "#j-recruit",
+  "posting": ".j-card",
+  "postingFields": {
+    "company": {"selector": "[data-field=company]"},
+    "title": {"selector": "[data-field=job]"},
+    "url": {"selector": "[data-field=job]", "attribute": "href"},
+    "date": {"selector": "[data-field=date]"},
+    "applicationId": {"selector": ":scope", "attribute": "data-application"},
+    "jobId": {"selector": ":scope", "attribute": "data-job"}
+  },
+  "loginRequired": "[data-login-required]",
+  "empty": "[data-empty]",
+  "loading": "[data-loading]",
+  "nextPage": "[data-next]",
+  "scope": {"selector": "[data-period]"},
+  "success": {"selector": "[data-success]", "text": "지원 완료", "record": "#j-result"},
+  "submissionForm": "#j-apply-form",
+  "statusMap": {"지원 완료": "applied", "지원 취소": "cancelled", "미열람": "applied", "열람": "applied"}
+}

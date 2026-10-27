@@ -1,0 +1,106 @@
+{
+  "sourceUrl": "https://www.jobkorea.co.kr/Search?stext=react&tabType=recruit&ord=RegDtDesc&careerType=1%2C2&careerMin=1&careerMax=3&Page_No=5",
+  "capturedAt": "2026-10-20T01:52:44.964Z",
+  "expected": [
+    {
+      "companyName": "㈜마니테크",
+      "jobTitle": "금융권 React.js 개발자 모집 (초급이상)",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50178270"
+    },
+    {
+      "companyName": "㈜텐",
+      "jobTitle": "Product Designer",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50177702"
+    },
+    {
+      "companyName": "크리에이트원 주식회사",
+      "jobTitle": "[수만휘 본사] 웹/앱 소프트웨어 엔지니어 채용(학원 LMS,CRM 플랫폼)",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50177544"
+    },
+    {
+      "companyName": "㈜클라우디아",
+      "jobTitle": "SI/SM 프로젝트 개발자 신입/경력 채용",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50177252"
+    },
+    {
+      "companyName": "㈜다솜에스앤씨",
+      "jobTitle": "SK텔레콤 차세대 Back End Process 분석/설계",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50176764"
+    },
+    {
+      "companyName": "자이언트솔루션(GIANT SOLUTION)",
+      "jobTitle": "[초/중/고급 00명] 커머스 플랫폼 운영 유지보수",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50176359"
+    },
+    {
+      "companyName": "㈜데이타솔루션",
+      "jobTitle": "[중견기업/IT] 데이타솔루션 응용개발자(경력) 채용",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50176245"
+    },
+    {
+      "companyName": "㈜한국미용데이터",
+      "jobTitle": "뷰카 프로덕트 엔지니어(Python, AWS) 경력 개발자 채용",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50175833"
+    },
+    {
+      "companyName": "㈜서치독",
+      "jobTitle": "[프리랜서](강동역) AI 사내 기술문서 검색 프로젝트 -  Frontend Engineer",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50175773"
+    },
+    {
+      "companyName": "㈜노블리치",
+      "jobTitle": "영카트를 다뤄보신 php 웹 프로그래머를 모집합니다.",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50174796"
+    },
+    {
+      "companyName": "㈜문토(munto)",
+      "jobTitle": "[시리즈A투자유치 / 문토] Node.js 개발자 (경력) I 문토 팀 (역삼역)",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50174563"
+    },
+    {
+      "companyName": "스피커블",
+      "jobTitle": "앱 개발자(React Native·경력 3년)",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50174446"
+    },
+    {
+      "companyName": "㈜문토(munto)",
+      "jobTitle": "[시리즈A투자유치 / 문토] Node.js 개발자 (신입) I 문토 팀 (역삼역)",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50174471"
+    },
+    {
+      "companyName": "내일소프트",
+      "jobTitle": "JAVA 초급,중급,고급 개발및유지보수 모집",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50174469"
+    },
+    {
+      "companyName": "NEZOT㈜",
+      "jobTitle": "[일본]NEZOT 주식회사 Expert Programmer(Front-End, Back-End)",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50174227"
+    },
+    {
+      "companyName": "㈜늘엔",
+      "jobTitle": "OutSystmes 개발자 모집",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50173312"
+    },
+    {
+      "companyName": "㈜비즈비",
+      "jobTitle": "[Java/Spring] 백엔드 개발",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50171646"
+    },
+    {
+      "companyName": "이수정보㈜",
+      "jobTitle": "[이천] OO기업 표준 SOP 플랫폼 구축(java/초급,중급)",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50171623"
+    },
+    {
+      "companyName": "㈜하이퍼놀로지",
+      "jobTitle": "[하이퍼놀로지] AI 응용 S/W 개발 전문가 모집",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50170905"
+    },
+    {
+      "companyName": "한국산업인력공단",
+      "jobTitle": "[2026 Global Career Fair] MINOSYS, 시스템엔지니어 (일본)",
+      "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50170875"
+    }
+  ]
+}

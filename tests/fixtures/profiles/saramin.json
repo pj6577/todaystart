@@ -1,0 +1,38 @@
+{
+  "platform": "saramin",
+  "version": "fixture-only-v1",
+  "validatedAt": "TEST FIXTURE ONLY - NOT LIVE DOM",
+  "historyPaths": ["/__todaystart/history"],
+  "listingPaths": ["/__todaystart/jobs"],
+  "detailPaths": ["/__todaystart/detail"],
+  "historyRoot": "#s-history",
+  "historyRow": ".s-application",
+  "historyFields": {
+    "company": {"selector": ".s-company"},
+    "title": {"selector": ".s-title"},
+    "url": {"selector": ".s-title", "attribute": "href"},
+    "date": {"selector": "time", "attribute": "datetime"},
+    "status": {"selector": ".s-status"},
+    "applicationId": {"selector": ":scope", "attribute": "data-application-id"},
+    "jobId": {"selector": ":scope", "attribute": "data-job-id"},
+    "companyIdentifier": {"selector": ":scope", "attribute": "data-company-identifier"}
+  },
+  "listingRoot": "#s-jobs",
+  "posting": ".s-job",
+  "postingFields": {
+    "company": {"selector": ".s-company"},
+    "title": {"selector": ".s-title"},
+    "url": {"selector": ".s-title", "attribute": "href"},
+    "date": {"selector": "time", "attribute": "datetime"},
+    "applicationId": {"selector": ":scope", "attribute": "data-application-id"},
+    "jobId": {"selector": ":scope", "attribute": "data-job-id"}
+  },
+  "loginRequired": "#s-login-required",
+  "empty": "#s-empty",
+  "loading": "#s-loading",
+  "nextPage": "#s-next",
+  "scope": {"selector": "#s-period"},
+  "success": {"selector": "#s-success", "text": "입사지원이 완료되었습니다", "record": "#s-result"},
+  "submissionForm": "#s-apply-form",
+  "statusMap": {"지원완료": "applied", "지원취소": "cancelled", "열람": "applied", "확인대기": "pending_confirmation"}
+}

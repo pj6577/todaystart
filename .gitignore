@@ -1,0 +1,35 @@
+node_modules/
+.plasmo/
+build/
+playwright-report/
+test-results/
+*.log
+*.tsbuildinfo
+.env*
+.tmp/
+
+# Local releases, design iterations and generated marketing material.
+output/
+release/*
+!release/설치안내.txt
+!release/todaystart-0.9.3.sha256
+!release/todaystart-0.9.3-validation.json
+
+# Only curated documentation and representative screenshots are tracked.
+docs/*
+!docs/architecture.md
+!docs/privacy-policy.md
+!docs/asset-categories.md
+!docs/optimization-and-open-source.md
+!docs/validation-0.9.3.md
+!docs/secret-audit-2026-10-27.md
+!docs/images/
+
+# Local signing credentials and browser/account secrets.
+*.pem
+*.p12
+*.pfx
+*.key
+credentials*.json
+service-account*.json
+application_default_credentials.json

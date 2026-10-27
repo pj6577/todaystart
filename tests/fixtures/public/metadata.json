@@ -1,0 +1,109 @@
+{
+  "saraminSearch": {
+    "id": "saraminSearch",
+    "platform": "saramin",
+    "sourceUrl": "https://www.saramin.co.kr/zf_user/search?searchword=%EA%B0%9C%EB%B0%9C%EC%9E%90",
+    "capturedAt": "2026-10-19T08:58:36.717Z",
+    "sourcePostingCount": 40,
+    "capturedPostingCount": 2,
+    "expected": [
+      {
+        "companyName": "(주)한싹",
+        "jobTitle": "2026년 하반기 한싹그룹 각 부문별 인재 채용 (연구개발자, 전략기획, 영업, 기술엔지니어)",
+        "jobUrl": "https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=55272129"
+      },
+      {
+        "companyName": "(주)신흥정밀",
+        "jobTitle": "(주)신흥정밀 SA사업부 솔루션개발실 SW개발자 인재모집",
+        "jobUrl": "https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=55321927"
+      }
+    ]
+  },
+  "saraminDetail": {
+    "id": "saraminDetail",
+    "platform": "saramin",
+    "sourceUrl": "https://www.saramin.co.kr/zf_user/jobs/relay/pop-view?rec_idx=55272129",
+    "capturedAt": "2026-10-19T08:58:35.974Z",
+    "sourcePostingCount": 1,
+    "capturedPostingCount": 1,
+    "expected": [
+      {
+        "companyName": "(주)한싹",
+        "jobTitle": "2026년 하반기 한싹그룹 각 부문별 인재 채용 (연구개발자, 전략기획, 영업, 기술엔지니어)",
+        "jobUrl": "https://www.saramin.co.kr/zf_user/jobs/relay/pop-view?rec_idx=55272129"
+      }
+    ]
+  },
+  "jobkoreaList": {
+    "id": "jobkoreaList",
+    "platform": "jobkorea",
+    "sourceUrl": "https://www.jobkorea.co.kr/recruit/joblist?localorder=1&menucode=local",
+    "capturedAt": "2026-10-19T08:58:37.339Z",
+    "sourcePostingCount": 40,
+    "capturedPostingCount": 2,
+    "expected": [
+      {
+        "companyName": "카이키",
+        "jobTitle": "[강남역] 니혼슈바,이자캬야 카이키 .주방 경력직원 채용",
+        "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50196792"
+      },
+      {
+        "companyName": "코지하우스 평택안중점",
+        "jobTitle": "코지하우스 평택안중점 주방 / 홀 정직원 모집합니다",
+        "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50187052"
+      }
+    ]
+  },
+  "jobkoreaDetail": {
+    "id": "jobkoreaDetail",
+    "platform": "jobkorea",
+    "sourceUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50195247",
+    "capturedAt": "2026-10-19T08:58:36.976Z",
+    "sourcePostingCount": 1,
+    "capturedPostingCount": 1,
+    "expected": [
+      {
+        "companyName": "우영산업㈜",
+        "jobTitle": "생산부-전기팀/품질관리/생산부-조립팀/기계기술연구소 채용",
+        "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50195247"
+      }
+    ]
+  },
+  "wantedDetail": {
+    "id": "wantedDetail",
+    "platform": "wanted",
+    "sourceUrl": "https://www.wanted.co.kr/wd/22942",
+    "capturedAt": "2026-10-19T10:21:37.335Z",
+    "sourcePostingCount": 1,
+    "capturedPostingCount": 1,
+    "expected": [
+      {
+        "companyName": "원티드랩",
+        "jobTitle": "프론트엔드 개발자 [프론트엔드팀]",
+        "jobUrl": "https://www.wanted.co.kr/wd/22942"
+      }
+    ]
+  },
+  "jobkoreaSearch": {
+    "id": "jobkoreaSearch",
+    "platform": "jobkorea",
+    "sourceUrl": "https://www.jobkorea.co.kr/Search?stext=react&tabType=recruit&ord=RegDtDesc&careerType=1%2C2&careerMin=1&careerMax=3&Page_No=4",
+    "capturedAt": "2026-10-19T18:14:10.987Z",
+    "sourcePostingCount": 20,
+    "capturedPostingCount": 2,
+    "expected": [
+      {
+        "companyName": "콴텍 주식회사",
+        "jobTitle": "[AI콴텍] 로보어드바이저 IRP 시스템 개발",
+        "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50183259",
+        "sourceJobId": "50183259"
+      },
+      {
+        "companyName": "㈜아큐라시스템",
+        "jobTitle": "웹 개발자 채용(시스템 운영)",
+        "jobUrl": "https://www.jobkorea.co.kr/Recruit/GI_Read/50182513",
+        "sourceJobId": "50182513"
+      }
+    ]
+  }
+}
