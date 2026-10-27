@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#f7f8fa" />
+    <meta
+      name="description"
+      content="오늘시작 확장 프로그램의 로컬 저장 방식과 소개 페이지의 개인정보 처리 범위를 안내합니다."
+    />
+    <link rel="canonical" href="https://pj6577.github.io/todaystart/privacy.html" />
+    <link rel="icon" type="image/svg+xml" href="./assets/icon.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>개인정보 안내 — 오늘시작</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">본문으로 바로 가기</a>
+    <header class="site-header glass">
+      <a class="brand" href="./"
+        ><img src="./assets/icon.svg" width="34" height="34" alt="" /><span>오늘시작</span></a
+      ><a class="text-link" href="./">소개 페이지로 <span aria-hidden="true">↗</span></a>
+    </header>
+    <main id="main" class="document-main section-shell">
+      <article class="document-card glass">
+        <p class="eyebrow">저장 위치와 처리 범위</p>
+        <h1>개인정보 안내</h1>
+        <p class="document-date">작성일: 2026년 10월 27일 · 저장소 버전 0.9.3 기준</p>
+        <p>
+          이 안내는 오늘시작 확장 프로그램과 현재 소개 페이지의 처리 방식을 구분해 설명합니다.
+          스토어 배포 버전과 저장소의 개발 버전은 다를 수 있습니다.
+        </p>
+        <h2>확장 프로그램의 기록은 로컬에 보관합니다</h2>
+        <p>
+          지원 기록·기업 메모·일정은 확장 프로그램의 IndexedDB에, 설정은 Chrome 확장 프로그램
+          저장소에 보관합니다. 별도 계정·원격 데이터베이스·광고 또는 분석 SDK를 사용하지 않으며, 이
+          기록을 개발자 서버로 전송하지 않습니다. 기기 간 자동 동기화도 하지 않습니다.
+        </p>
+        <ul>
+          <li>
+            지원 현황 가져오기는 사용자가 로그인한 채용 사이트의 화면과 허용된 동일 출처 요청을
+            사용합니다.
+          </li>
+          <li>비밀번호·쿠키 원문·인증 헤더·이력서 본문을 지원 기록으로 읽어 저장하지 않습니다.</li>
+          <li>수집 진행을 위한 임시 상태는 세션 저장소에 보관하며 브라우저를 닫으면 사라집니다.</li>
+          <li>
+            일부 이전 지원 정보는 현재 채용 사이트의 공고에 표시됩니다. 표시한 정보는 해당 페이지의
+            코드가 읽을 수 있는 영역에 놓입니다.
+          </li>
+        </ul>
+        <h2>삭제와 백업은 직접 관리할 수 있습니다</h2>
+        <p>
+          관리 화면에서 기록을 수정·삭제하고 CSV 또는 JSON으로 내보낼 수 있습니다. 확장 프로그램이나
+          브라우저 프로필을 제거하면 로컬 기록을 잃을 수 있으므로 먼저 백업하세요. 내보낸 파일은
+          삭제 후에도 파일 시스템에 남으며, 파일의 보관·공유·삭제는 사용자가 관리합니다.
+        </p>
+        <h2>소개 페이지에는 방문자 분석을 넣지 않았습니다</h2>
+        <p>
+          이 페이지는 정적 파일로 제공하며, 개발자가 별도로 운영하는 분석 도구·광고 추적·입력
+          폼·브라우저 저장 기능을 포함하지 않습니다. 서체와 화면 이미지는 같은 사이트에서
+          제공합니다. 이 페이지는 설치된 확장 프로그램의 지원 기록이나 메모를 읽지 않습니다.
+        </p>
+        <div class="document-callout">
+          <p>
+            호스팅 제공자인 GitHub는 GitHub Pages 방문자의 IP 주소를 보안 목적으로 기록·보관한다고
+            안내합니다. 이는 개발자가 운영하는 방문자 분석과 별개입니다.
+            <a
+              href="https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages#data-collection"
+              >GitHub Pages 데이터 수집 안내</a
+            >를 확인하세요.
+          </p>
+        </div>
+        <h2>외부 링크와 문의</h2>
+        <p>
+          Chrome 웹 스토어·GitHub·Discord 링크를 열면 해당 서비스의 개인정보 처리방침이 적용됩니다.
+          오늘시작의 관리자는 GitHub의 <a href="https://github.com/pj6577">pj6577</a>이며,
+          기능·데이터 처리 관련 문의는
+          <a href="https://github.com/pj6577/todaystart/issues">공식 저장소 이슈</a>로 전달할 수
+          있습니다. 공개 이슈에는 지원 이력·이메일·연락처·쿠키·토큰 등 개인정보나 인증정보를 올리지
+          마세요.
+        </p>
+        <p>
+          기술적인 처리 범위와 버전별 변경은
+          <a href="https://github.com/pj6577/todaystart/blob/main/docs/privacy-policy.md"
+            >저장소의 구현 상세 문서</a
+          >에서 확인할 수 있습니다. 처리 방식이 바뀌면 이 안내도 함께 갱신합니다.
+        </p>
+        <a class="text-link" href="./"
+          >오늘시작 소개로 돌아가기 <span aria-hidden="true">↗</span></a
+        >
+      </article>
+    </main>
+    <footer class="site-footer section-shell">
+      <div class="footer-top">
+        <a class="brand" href="./"
+          ><img src="./assets/icon.svg" width="30" height="30" alt="" /><span>오늘시작</span></a
+        >
+        <nav aria-label="관련 링크">
+          <a href="https://github.com/pj6577/todaystart">GitHub</a
+          ><a href="https://github.com/pj6577/todaystart/blob/main/LICENSE">이용 조건</a>
+        </nav>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2026 오늘시작</p>
+        <p>소스 공개 · 개인 사용 허용 · 재배포는 별도 허가</p>
+      </div>
+    </footer>
+  </body>
+</html>

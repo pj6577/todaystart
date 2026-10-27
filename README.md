@@ -13,7 +13,7 @@
 
 **소스 공개 · 개인 사용 허용 · 재배포는 별도 허가**
 
-[웹 스토어](https://chromewebstore.google.com/detail/dhgfnibbnjieajcmnohdkiandeljeaef) · [빠른 시작](#빠른-시작) · [개발하기](#개발하기) · [변경 기록](CHANGELOG.md) · [이용 조건](LICENSE)
+[소개 페이지](https://pj6577.github.io/todaystart/) · [웹 스토어](https://chromewebstore.google.com/detail/dhgfnibbnjieajcmnohdkiandeljeaef) · [빠른 시작](#빠른-시작) · [개발하기](#개발하기) · [변경 기록](CHANGELOG.md) · [이용 조건](LICENSE)
 
 </div>
 
