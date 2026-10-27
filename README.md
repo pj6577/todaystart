@@ -121,11 +121,13 @@ npm run package     # build/chrome-mv3-prod.zip 생성
 
 ```text
 src/
+  background/    요청 권한 검사와 기능별 메시지 처리
+  messaging/     요청 스키마와 요청별 응답 타입
   core/          기록 모델, 기업 비교, 메모·일정과 색인
   platforms/     사이트별 DOM 파서와 페이지 이동
   contents/      공고 감지, 지원 관찰, 페이지 갱신
   collection/    지원 현황 수집과 전체 페이지 순회
-  storage/       Dexie 저장소와 설정
+  storage/       지원 기록·메모·백업 저장소, DB 스키마와 설정
   submission/    지원 시도·완료 관찰
   ui/            대시보드·기록·메모·캘린더 화면
 tests/
@@ -133,6 +135,8 @@ tests/
   unit/          파서·매칭·저장·상태 회귀 검사
   e2e/           설치된 확장 프로그램의 브라우저 검사
 ```
+
+메시지 흐름, 저장소의 트랜잭션 경계, 화면 상태 분리는 [아키텍처 문서](docs/architecture.md)에 정리했습니다.
 
 Zod는 현재 번들 호환성 때문에 **3.24.4**로 고정되어 있습니다. 변경 시 타입 검사뿐 아니라 빌드된 확장 프로그램의 브라우저 검사도 확인해야 합니다.
 

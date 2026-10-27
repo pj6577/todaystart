@@ -1,14 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
-import { Brand, Icon, Notice, Toggle, Sentences } from "./ui/components"
-import { download, formatTime, toCsv, type Snapshot } from "./ui/client"
+import { Brand, Icon, Notice } from "./ui/components"
+import { download, formatTime, toCsv } from "./ui/client"
+import { RecordEditDialog, RecordDeleteDialog } from "./ui/record-dialogs"
+import { SettingsPage } from "./ui/settings-page"
 import { RecordTable } from "./ui/record-table"
 import { useTheme } from "./ui/theme"
 import { HistoryRunStatus } from "./ui/history-run-status"
 import { rpc } from "./messaging/protocol"
-import { platformLabel, statusLabel, applicationSources, requiresStatusReview, type ApplicationRecord, type ApplicationStatus, type ApplicationSource } from "./core/model"
+import { platformLabel, applicationSources, requiresStatusReview, type ApplicationRecord, type ApplicationSource } from "./core/model"
 import { compareApplicationRecords, compareRecordsByColumn, type RecordSort, type RecordSortKey } from "./core/record-order"
 import { RecordReviewPanel } from "./ui/record-review-panel"
-import { platformIds } from "./core/platforms"
 import { ManualApplicationForm } from "./ui/manual-application-form"
 import { DashboardSummary } from "./ui/dashboard-summary"
 import { DashboardHero } from "./ui/dashboard-hero"
@@ -28,14 +29,11 @@ import { NoteEditor } from "./ui/note-editor"
 import { EventEditor } from "./ui/event-editor"
 import { RecordDetails } from "./ui/record-details"
 import { UpcomingEvents } from "./ui/upcoming-events"
-import { CommunityLink } from "./ui/community-link"
-import { StoreReview } from "./ui/store-review"
-import { LocalDataInfo } from "./ui/local-data-info"
-import { PlatformSymbol } from "./ui/platform-logo"
 import { linkedRecord } from "./ui/planner-components"
 import { noteCountsByRecord } from "./core/planner-lookups"
-import type { Note, NoteDraft, CareerEvent, EventDraft } from "./core/planner"
-import { draftsChanged, readPlannerDrafts, removePlannerDraft, syncDraftGeneration, type PlannerDraft } from "./ui/planner-drafts"
+import { removePlannerDraft } from "./ui/planner-drafts"
+import { usePlannerEditors } from "./ui/use-planner-editors"
+import { useWorkspaceData } from "./ui/use-workspace-data"
 import "./style.css"
 import "./ui/planner.css"
 import "./ui/note-board.css"
@@ -47,7 +45,6 @@ function viewFromHash(): View {
 }
 
 function Options() {
-  const [snapshot, setSnapshot] = useState<Snapshot>()
   const [view, setView] = useState<View>(viewFromHash)
   const [query, setQuery] = useState("")
   const [platform, setPlatform] = useState<ApplicationSource | "all">("all")
@@ -57,51 +54,28 @@ function Options() {
   const [reviewOnly, setReviewOnly] = useState(false)
   const [editingReview, setEditingReview] = useState(false)
   const [editingStatus, setEditingStatus] = useState(false)
-  const statusInput = useRef<HTMLSelectElement>(null)
   const reviewPanel = useRef<HTMLDivElement>(null)
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
   const [editing, setEditing] = useState<ApplicationRecord>()
-  useEffect(() => { if (editingStatus) statusInput.current?.focus() }, [editing?.id, editingStatus])
   const [deleting, setDeleting] = useState<ApplicationRecord>()
   const [deleteLinked, setDeleteLinked] = useState(false)
-  const [detail, setDetail] = useState<string>()
-  const [noteEditor, setNoteEditor] = useState<{ initial: NoteDraft; recovered?: PlannerDraft; returnLinkId?: string; initialMenu?: boolean; activeId?: string }>()
-  const [eventEditor, setEventEditor] = useState<{ initial: EventDraft; recovered?: PlannerDraft; returnLinkId?: string }>()
-  const [drafts, setDrafts] = useState<PlannerDraft[]>([])
-  const draftGeneration = useRef<string>()
   const [busy, setBusy] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [resetError, setResetError] = useState("")
   const backupInput = useRef<HTMLInputElement>(null)
   const profileInput = useRef<HTMLInputElement>(null)
-  useTheme(snapshot?.settings.theme)
 
-  async function load() {
-    const next = await rpc<Snapshot>({ type: "snapshot" })
-    if (draftGeneration.current !== next.dataGeneration) { setNoteEditor(undefined); setEventEditor(undefined); setDetail(undefined) }
-    draftGeneration.current = next.dataGeneration
-    syncDraftGeneration(next.dataGeneration)
-    setDrafts(readPlannerDrafts(next.dataGeneration)); setSnapshot(next)
-  }
-  async function loadPlanner() {
-    const next = await rpc<Pick<Snapshot, "planner" | "dataGeneration">>({ type: "planner_snapshot" })
-    if (draftGeneration.current !== next.dataGeneration) { await load(); return }
-    setSnapshot(current => current && current.dataGeneration === next.dataGeneration ? { ...current, planner: next.planner } : current)
-  }
+  const { snapshot, setSnapshot, drafts, load } = useWorkspaceData(
+    () => resetEditors(),
+    setError
+  )
+  const { detail, setDetail, noteEditor, setNoteEditor, eventEditor, setEventEditor, openNote, openEvent, resumeDraft, resetEditors } = usePlannerEditors(snapshot, () => navigate("notes"))
+  useTheme(snapshot?.settings.theme)
   useEffect(() => {
-    void load().catch(e => setError(e.message))
-    const changed = (changes: Record<string, chrome.storage.StorageChange>) => {
-      if (changes.revision || changes.settings || changes.reports || changes.historyRun || changes.historyCompletions || changes.submissionAttempts) void load().catch(e => setError(e.message))
-      else if (changes.plannerRevision) void loadPlanner().catch(e => setError(e.message))
-    }
     const navigate = () => { setView(viewFromHash()); if (viewFromHash() !== "notes") setNoteEditor(undefined); if (location.hash === "#add") setAdding(true) }
-    const refreshDrafts = () => setDrafts(readPlannerDrafts(draftGeneration.current))
-    chrome.storage.onChanged.addListener(changed)
     window.addEventListener("hashchange", navigate)
-    window.addEventListener(draftsChanged, refreshDrafts)
-    window.addEventListener("storage", refreshDrafts)
-    return () => { chrome.storage.onChanged.removeListener(changed); window.removeEventListener("hashchange", navigate); window.removeEventListener(draftsChanged, refreshDrafts); window.removeEventListener("storage", refreshDrafts) }
+    return () => window.removeEventListener("hashchange", navigate)
   }, [])
   function navigate(next: View) { if (next !== "notes") setNoteEditor(undefined); setView(next); history.replaceState(null, "", "#" + next) }
   async function action(callback: () => Promise<void>) {
@@ -157,22 +131,6 @@ function Options() {
     setSort(current => ({ key, direction: current.key === key ? current.direction === "ascending" ? "descending" : "ascending" : key === "appliedAt" ? "descending" : "ascending" }))
   }
   function editRecord(record: ApplicationRecord, review = false, status = false) { setEditing(record); setEditingReview(review); setEditingStatus(status) }
-  function openNote(note?: Note, linkId?: string, returnLinkId?: string, initialMenu = false) {
-    const initial: NoteDraft = note ? { id: note.id, expectedRevision: note.revision, title: note.title, body: note.body, checklist: note.checklist, pinned: note.pinned, linkId: note.linkId, color: note.color, mentions: note.mentions } : { id: crypto.randomUUID(), expectedRevision: 0, title: "", body: "", checklist: [], pinned: false, linkId, color: "yellow", mentions: [] }
-    const recovered = readPlannerDrafts(snapshot?.dataGeneration).find((item): item is Extract<PlannerDraft, { kind: "note" }> => item.kind === "note" && (note ? item.value.id === note.id : item.value.expectedRevision === 0 && item.value.id !== noteEditor?.initial.id && item.value.linkId === linkId))
-    setDetail(undefined); navigate("notes"); setNoteEditor({ initial: recovered?.value || initial, recovered, returnLinkId, initialMenu })
-  }
-  function openEvent(event?: CareerEvent, date?: string, linkId?: string, returnLinkId?: string) {
-    const record = linkedRecord(linkId, records, planner.links)
-    const initial: EventDraft = event ? { id: event.id, expectedRevision: event.revision, title: event.title, kind: event.kind, status: event.status, date: event.date, time: event.time, location: event.location, url: event.url, body: event.body, checklist: event.checklist, linkId: event.linkId } : { id: crypto.randomUUID(), expectedRevision: 0, title: record ? `${record.companyName} 면접` : "", kind: record ? "interview" : "other", status: "planned", date: date || new Date(Date.now() + 9 * 3600000).toISOString().slice(0,10), location: "", body: "", checklist: [], linkId }
-    const recovered = readPlannerDrafts(snapshot?.dataGeneration).find((item): item is Extract<PlannerDraft, { kind: "event" }> => item.kind === "event" && (event ? item.value.id === event.id : item.value.expectedRevision === 0 && item.value.linkId === linkId && (!date || item.value.date === date)))
-    setDetail(undefined); setEventEditor({ initial: recovered?.value || initial, recovered, returnLinkId })
-  }
-  function resumeDraft(draft: PlannerDraft) {
-    setDetail(undefined)
-    if (draft.kind === "note") { navigate("notes"); setNoteEditor({ initial: draft.value, recovered: draft }) }
-    else setEventEditor({ initial: draft.value, recovered: draft })
-  }
   async function saveEditing(next = false) {
     if (!editing) return
     const current = editing, following = next ? reviewRecords.find(record => record.id !== current.id) : undefined
@@ -189,7 +147,7 @@ function Options() {
       if (file.size > collectionPolicy.maxImportBytes) throw new Error("파일은 20MB 이하여야 합니다.")
       const value: unknown = JSON.parse((await file.text()).replace(/^\uFEFF/, ""))
       if (kind === "backup") {
-        const result = await rpc<{ inserted: number; updated: number; notes?: number; events?: number }>({ type: "restore", backup: value })
+        const result = await rpc({ type: "restore", backup: value })
         setNotice(`백업 복원 완료 · ${result.inserted}건 추가 · ${result.updated}건 갱신${result.notes || result.events ? ` · 메모 ${result.notes || 0}건 · 일정 ${result.events || 0}건` : ""}`)
       } else {
         if (!settings) throw new Error("설정을 불러오는 중입니다.")
@@ -233,60 +191,7 @@ function Options() {
       {notice && <div className="toast"><Notice>{notice}</Notice></div>}
       {!noteEditor && !eventEditor && drafts.length > 0 && <section className="planner-recovery" aria-label="임시 저장한 작성 내용"><h2>이어서 작성해요</h2>{drafts.map(draft => <div key={draft.key}><button className="text-btn" onClick={() => resumeDraft(draft)}>{draft.kind === "note" ? "메모" : "일정"} · {draft.value.title || "제목 없음"} 이어쓰기</button><button className="icon-btn" aria-label={`${draft.value.title || "제목 없는 작성 내용"} 임시 저장 삭제`} onClick={() => removePlannerDraft(draft)}><Icon name="close" size={14} /></button></div>)}</section>}
 
-      {view === "settings" && settings ? <div className="settings-stack">
-        <LocalDataInfo />
-        <section className="settings-section settings-appearance">
-          <div className="settings-section-heading"><h2>화면 모드</h2><p>시스템 설정을 따르거나 화면 모드를 직접 선택하세요.</p></div>
-          <div className="theme-control" role="group" aria-label="화면 모드">{([
-            { value: "system", label: "시스템", icon: "monitor" }, { value: "light", label: "라이트", icon: "sun" }, { value: "dark", label: "다크", icon: "moon" }
-          ] as const).map(mode => <button key={mode.value} className="theme-choice" aria-pressed={settings.theme === mode.value} disabled={busy} onClick={() => void action(() => updateSettings({ ...settings, theme: mode.value }))}><Icon name={mode.icon} size={16} />{mode.label}</button>)}</div>
-        </section>
-
-        <StoreReview />
-        <section className="settings-section settings-support" aria-labelledby="settings-support-title">
-          <div className="settings-section-heading"><h2 id="settings-support-title">도움말과 의견</h2><p>버그 제보와 기능 제안은 디스코드 커뮤니티에 남겨 주세요.</p></div>
-          <CommunityLink />
-        </section>
-
-        <section className="settings-section">
-          <div className="settings-section-heading"><h2>자동 수집</h2><p>지원 기록을 언제, 어느 사이트에서 가져올지 정해요.</p></div>
-          <Toggle label="자동 기록" detail="사람인·잡코리아·원티드의 최종 제출을 관찰합니다. 확인되지 않은 결과는 지원 완료로 처리하지 않습니다." checked={settings.autoRecord} disabled={busy} onChange={() => void action(() => updateSettings({ ...settings, autoRecord: !settings.autoRecord }))} />
-          <Toggle label="지원 현황 자동 가져오기" detail="기본은 꺼짐입니다. 켜면 직접 연 지원 현황의 현재 목록도 자동으로 가져옵니다." checked={settings.historyAutoCollect} disabled={busy} onChange={() => void action(() => updateSettings({ ...settings, historyAutoCollect: !settings.historyAutoCollect }))} />
-          <div className="settings-platforms"><h3>사이트별 수집</h3><div className="settings-platform-grid">{platformIds.map(p => <div className="settings-platform-item" key={p}><PlatformSymbol platform={p} /><Toggle label={`${platformLabel[p]} 자동 수집`} detail={`${platformLabel[p]} 지원 기록 수집을 허용해요.`} checked={settings.consent[p]} disabled={busy} onChange={() => void action(() => updateSettings({ ...settings, consent: { ...settings.consent, [p]: !settings.consent[p] } }))} /></div>)}</div></div>
-        </section>
-
-        <section className="settings-section">
-          <div className="settings-section-heading"><h2>경고와 기록 표시</h2></div>
-          {([
-            { key: "listingWarnings", label: "공고 목록 경고", detail: "공고 목록에 이전 지원 이력을 표시합니다." },
-            { key: "detailWarnings", label: "공고 상세 경고", detail: "공고 상세에서 이전 지원 날짜와 직무를 표시합니다." },
-            { key: "similarWarnings", label: "유사 기업명 경고", detail: "이름이 비슷한 기업을 추가로 표시합니다. 동일 기업으로 확정하지 않습니다." },
-            { key: "showCancelled", label: "취소된 기록 표시", detail: "지원 기록 목록과 경고에 취소된 지원도 포함합니다." }
-          ] as const).map(item => <Toggle key={item.key} label={item.label} detail={item.detail} checked={settings[item.key]} disabled={busy} onChange={() => void action(() => updateSettings({ ...settings, [item.key]: !settings[item.key] }))} />)}
-        </section>
-
-        <details className="settings-section advanced-settings">
-          <summary>사이트 수집 진단</summary>
-          <p><Sentences>지원 현황은 사이트별 목록 구조를 읽어 수집합니다. 화면 형태에 따라 인식하지 못할 수 있습니다. 그때는 팝업에서 개인정보를 제거한 화면 진단 파일을 저장해 주세요. 등록한 플랫폼별 선택자 JSON은 우선 적용합니다.</Sentences></p>
-          <div className="profile-status">{platformIds.map(p => <span key={p}>{platformLabel[p]} · {settings.profiles[p] ? `${settings.profiles[p]!.version} 등록됨` : "기본 수집"}</span>)}</div>
-          <div className="file-actions"><button className="btn" disabled={busy} onClick={() => profileInput.current?.click()}>선택자 파일 등록</button>{platformIds.filter(p => settings.profiles[p]).map(p => <button className="text-btn" key={p} disabled={busy} onClick={() => void action(async () => { const profiles = { ...settings.profiles }; delete profiles[p]; await updateSettings({ ...settings, profiles }) })}>{platformLabel[p]} 설정 해제</button>)}</div>
-        </details>
-
-        <details className="settings-section settings-help">
-          <summary>지원 기록 가져오는 방법</summary>
-          <ol className="help-steps"><li>사람인·잡코리아·원티드·리멤버에 직접 로그인합니다.</li><li>지원 현황에서 조회 기간을 선택합니다.</li><li>팝업의 ‘조회 기간 전체 가져오기’를 누릅니다.</li><li>다른 경로의 지원은 ‘직접 추가’로 기록합니다.</li></ol>
-          <p className="small muted mt-3"><Sentences>전체 가져오기는 현재 조회 조건의 페이지를 순서대로 읽습니다. 화면에서 읽을 수 없는 기록과 다른 기간의 기록은 포함되지 않습니다. 기존 기록은 삭제하지 않습니다.</Sentences></p>
-        </details>
-        <section className="settings-section settings-backup">
-          <div className="settings-section-heading"><h2>백업과 복원</h2><p>지원 기록·메모·일정을 파일로 보관해요. 복원하면 기존 데이터와 합쳐져요.</p></div>
-          <div className="file-actions"><button className="btn" disabled={busy} onClick={() => void action(async () => { const backup = await rpc({ type: "backup" }); download("오늘시작-백업.json", JSON.stringify(backup, null, 2), "application/json") })}><Icon name="download" size={15} />JSON 백업</button><button className="btn" disabled={busy} onClick={() => backupInput.current?.click()}>JSON 복원</button></div>
-        </section>
-        <section className="settings-section reset-data-section">
-          <div className="settings-section-heading"><h2>데이터 초기화</h2><p>저장한 지원 기록·메모·일정과 가져오기 상태를 지웁니다. 화면 모드와 수집 설정은 유지됩니다.</p></div>
-          <button className="btn danger" disabled={busy || !snapshot} onClick={() => { setResetError(""); setResetting(true) }}>데이터 초기화</button>
-        </section>
-        <div className="settings-app-info"><span>오늘시작</span><span>버전 {chrome.runtime.getManifest().version}</span></div>
-      </div> : view === "overview" ? <>
+      {view === "settings" && settings ? <SettingsPage settings={settings} busy={busy} ready={!!snapshot} action={action} onSettingsChange={updateSettings} onProfileImport={() => profileInput.current?.click()} onBackupImport={() => backupInput.current?.click()} onReset={() => { setResetError(""); setResetting(true) }} /> : view === "overview" ? <>
         <div className="dashboard-overview-top">
           <DashboardSummary records={dashboardRecords} source={activeDashboardSource} />
           <DashboardImports ready={!!snapshot} consent={settings?.consent} collectingPlatform={snapshot?.historyRun?.status === "running" ? snapshot.historyRun.platform : undefined} />
@@ -317,23 +222,9 @@ function Options() {
     <input hidden ref={profileInput} type="file" accept=".json,application/json" aria-label="선택자 JSON 파일" onChange={e => { void importFile(e.target.files?.[0], "profile"); e.target.value = "" }} />
 
     {adding && <ManualApplicationForm onClose={() => { setAdding(false); if (location.hash === "#add") navigate("records") }} onSaved={() => { setAdding(false); setNotice("지원 기록을 추가했습니다."); if (location.hash === "#add") navigate("records"); void load().catch(error => setError(error.message)) }} />}
-    {editing && <div className="modal-backdrop" onKeyDown={e => { if (e.key === "Escape") setEditing(undefined) }}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="edit-title">
-      <div className="modal-heading"><h2 id="edit-title">지원 기록 수정</h2><button className="icon-btn" aria-label="닫기" onClick={() => setEditing(undefined)}><Icon name="close" size={18} /></button></div>
-      {editingReview && <p className="modal-description">실제 지원 현황을 확인한 뒤 상태를 선택해 주세요.<br />알 수 없는 지원 날짜는 비워둘 수 있어요.</p>}
-      <form onSubmit={e => { e.preventDefault(); void saveEditing() }}>
-        <label>기업명<input autoFocus={!editingStatus} required maxLength={300} value={editing.companyName} onChange={e => setEditing({ ...editing, companyName: e.target.value })} /></label>
-        <label>지원 직무<input required maxLength={1000} value={editing.jobTitle} onChange={e => setEditing({ ...editing, jobTitle: e.target.value })} /></label>
-        <label>지원 날짜<input type="date" value={editing.appliedAt || ""} onChange={e => setEditing({ ...editing, appliedAt: e.target.value || undefined })} /></label>
-        <label>상태<select ref={statusInput} aria-label="상태" value={editing.status} onChange={e => setEditing({ ...editing, status: e.target.value as ApplicationStatus })}>{Object.entries(statusLabel).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
-        <div className="modal-actions"><button className="btn" type="button" disabled={busy} onClick={() => setEditing(undefined)}>취소</button>{editingReview && reviewRecords.some(record => record.id !== editing.id) && <button className="btn" type="button" disabled={busy || requiresStatusReview(editing)} onClick={() => void saveEditing(true)}>저장하고 다음 확인</button>}<button className="btn primary" disabled={busy || editingReview && requiresStatusReview(editing)} type="submit">변경 저장</button></div>
-      </form>
-    </section></div>}
+    {editing && <RecordEditDialog record={editing} review={editingReview} focusStatus={editingStatus} hasNext={reviewRecords.some(record => record.id !== editing.id)} busy={busy} onChange={setEditing} onClose={() => setEditing(undefined)} onSave={saveEditing} />}
+    {deleting && <RecordDeleteDialog record={deleting} linked={deleteLinked} busy={busy} onLinkedChange={setDeleteLinked} onClose={() => setDeleting(undefined)} onDelete={() => void action(async () => { await rpc({ type: "remove", id: deleting.id, linked: deleteLinked ? "delete" : "keep" }); setDeleting(undefined); setNotice("기록을 삭제했습니다.") })} />}
 
-    {deleting && <div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-labelledby="delete-title">
-      <h2 id="delete-title">지원 기록을 삭제할까요?</h2><p className="modal-description">{deleting.companyName} · {deleting.jobTitle}<br /><Sentences>채용 사이트의 지원은 취소되지 않습니다. 같은 내역을 가져오면 다시 저장될 수 있습니다.</Sentences></p>
-      <label className="planner-checkbox"><input type="checkbox" checked={deleteLinked} onChange={event => setDeleteLinked(event.target.checked)} />연결된 메모와 일정도 함께 삭제</label><p className="small muted">선택하지 않으면 지원 연결만 해제하고 메모와 일정을 보관해요.</p>
-      <div className="modal-actions"><button className="btn" onClick={() => setDeleting(undefined)}>돌아가기</button><button className="btn danger" disabled={busy} onClick={() => void action(async () => { await rpc({ type: "remove", id: deleting.id, linked: deleteLinked ? "delete" : "keep" }); setDeleting(undefined); setNotice("기록을 삭제했습니다.") })}>기록 삭제</button></div>
-    </section></div>}
   </div>
 }
 export default Options

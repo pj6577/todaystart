@@ -4,6 +4,7 @@ import { SettingsSchema } from "../storage/settings"
 import { SubmissionEventSchema } from "../submission/model"
 import { NoteDraftSchema, EventDraftSchema } from "../core/planner"
 import { NoteLayoutChangeSchema } from "../core/note-board"
+import type { Response } from "./contracts"
 
 export const CollectionSchema = z.object({
   records: z.array(ApplicationSchema).max(2000),
@@ -44,8 +45,8 @@ export function requestErrorMessage(message: string): string {
   return message
 }
 
-export async function rpc<T>(request: Request): Promise<T> {
-  const result: Envelope<T> | undefined = await chrome.runtime.sendMessage(request)
+export async function rpc<R extends Request>(request: R): Promise<Response<R>> {
+  const result: Envelope<Response<R>> | undefined = await chrome.runtime.sendMessage(request)
   if (!result) throw new Error("확장 프로그램에 연결하지 못했습니다. 확장 프로그램을 새로고침해 주세요.")
   if (!result.ok) throw new Error(requestErrorMessage(result.error))
   return result.data

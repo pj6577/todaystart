@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react"
 import { Brand, Icon, Notice, PlatformTag, Sentences } from "./ui/components"
 import { download, formatTime, pageCommand, type Snapshot } from "./ui/client"
 import { rpc } from "./messaging/protocol"
-import { applicationSources, platformLabel, recordDateLabel, recordStatusLabel, type PageState, type SyncReport } from "./core/model"
+import { applicationSources, platformLabel, recordDateLabel, recordStatusLabel, type PageState } from "./core/model"
 import { platformIds } from "./core/platforms"
 import { platformForUrl } from "./core/urls"
 import { HistoryTask, openManagement } from "./ui/platform-links"
@@ -24,7 +24,7 @@ function Popup() {
   useTheme(snapshot?.settings.theme)
 
   async function load() {
-    setSnapshot(await rpc<Snapshot>({ type: "snapshot" }))
+    setSnapshot(await rpc({ type: "snapshot" }))
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
     if (tab?.id && tab.url && platformForUrl(tab.url)) {
       setTabId(tab.id)
@@ -37,7 +37,7 @@ function Popup() {
     void load().catch(e => setError(e.message))
     const changed = (changes: Record<string, chrome.storage.StorageChange>) => {
       if (changes.settings || changes.revision || changes.reports || changes.historyRun || changes.historyCompletions || changes.submissionAttempts) {
-        void rpc<Snapshot>({ type: "snapshot" }).then(setSnapshot).catch(e => setError(e.message))
+        void rpc({ type: "snapshot" }).then(setSnapshot).catch(e => setError(e.message))
         if (activeTab.current) void pageCommand(activeTab.current, "GET_PAGE").then(setPage).catch(() => undefined)
       }
     }
@@ -49,7 +49,7 @@ function Popup() {
     if (!tabId) return
     setBusy(true); setError(""); setNotice("")
     try {
-      const report = await pageCommand<SyncReport>(tabId, "SYNC_PAGE")
+      const report = await pageCommand(tabId, "SYNC_PAGE")
       if (["selectors_unverified", "dom_changed", "login_required", "error"].includes(report.code)) setError(report.message)
       else setNotice(report.code === "loading" ? report.message : `${report.inserted}건 추가 · ${report.updated}건 갱신. ${report.message}`)
       await load()
@@ -107,7 +107,7 @@ function Popup() {
       }}><Icon name={page.profileReady && enabled ? "refresh" : "settings"} size={15} />{waiting ? "목록이 나타나기를 기다리는 중…" : busy ? "가져오는 중…" : !enabled ? "수집 설정" : !page.profileReady ? "수집 상태 확인" : "현재 목록 가져오기"}</button>}
       {isHistory && <p className="collection-help">사이트에 설정한 기간과 필터를 유지하며 첫 페이지부터 읽습니다.</p>}
       {page.hasNextPage && tabId && <button className="text-btn" onClick={() => void pageCommand(tabId, "NEXT_PAGE").then(() => window.close()).catch(e => setError(e.message))}>다음 페이지 열기 <Icon name="arrow" size={14} /></button>}
-      {isHistory && tabId && <button className="text-btn" onClick={() => void pageCommand<unknown>(tabId, "HISTORY_DIAGNOSTICS").then(data => {
+      {isHistory && tabId && <button className="text-btn" onClick={() => void pageCommand(tabId, "HISTORY_DIAGNOSTICS").then(data => {
         download(`오늘시작-${page.platform}-화면진단.json`, JSON.stringify(data, null, 2), "application/json")
         setNotice("텍스트와 개인정보를 제거한 화면 구조를 저장했습니다.")
       }).catch(e => setError(e.message))}>화면 진단 파일 저장 <Icon name="download" size={14} /></button>}

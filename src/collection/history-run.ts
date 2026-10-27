@@ -1,6 +1,5 @@
-import type { SyncReport } from "../core/model"
 import { platformForUrl } from "../core/urls"
-import type { Envelope } from "../messaging/protocol"
+import { sendPageRequest, PageRequestError, type PageRequest, type PageResponse } from "../messaging/page-protocol"
 import { getSettings } from "../storage/settings"
 import { historyFilterKey, isBuiltInHistoryUrl } from "../platforms/history-pagination"
 import type { HistoryRun, HistoryRunIssue, HistoryRunPage } from "./history-run-model"
@@ -38,10 +37,11 @@ function patch(id: string, changes: Partial<StoredRun>) {
   writeQueue = operation.catch(() => undefined)
   return operation
 }
-async function command<T>(tabId: number, type: string, runId?: string): Promise<T> {
-  const response: Envelope<T> | undefined = await chrome.tabs.sendMessage(tabId, { type, ...(runId ? { runId } : {}) }).catch(error => { throw new CollectionFailure(String(error), "connection_lost") })
-  if (!response?.ok) throw new CollectionFailure(response && !response.ok ? response.error : "지원 현황에 연결하지 못했습니다.", response ? "unknown" : "connection_lost")
-  return response.data
+async function command<R extends PageRequest>(tabId: number, request: R): Promise<PageResponse<R>> {
+  try { return await sendPageRequest(tabId, request) }
+  catch (error) {
+    throw new CollectionFailure(error instanceof Error ? error.message : String(error), error instanceof PageRequestError && error.kind === "remote" ? "unknown" : "connection_lost")
+  }
 }
 class Stopped extends CollectionFailure {
   constructor(message = "", issue: HistoryRunIssue = "unknown") { super(message, issue) }
@@ -69,7 +69,7 @@ async function readable(id: string, previous?: string): Promise<HistoryRunPage> 
     const { run, tab } = await guard(id)
     if (tab.status !== "loading") {
       try {
-        const page = await command<HistoryRunPage>(run.tabId, "HISTORY_RUN_INSPECT")
+        const page = await command(run.tabId, { type: "HISTORY_RUN_INSPECT" })
         const pageKey = await filterHash(page.url)
         if (!isBuiltInHistoryUrl(page.url, run.platform) || pageKey !== run.filterKey && pageKey !== run.resolvedFilterKey) throw new Stopped("조회 조건이 바뀌었습니다.", "context_changed")
         const contextKey = await filterHash(page.filterUrl || page.url)
@@ -96,7 +96,7 @@ async function readable(id: string, previous?: string): Promise<HistoryRunPage> 
 async function navigate(id: string, type: "NEXT_PAGE" | "FIRST_PAGE", fingerprint: string) {
   await patch(id, { navigationAt: new Date().toISOString(), message: type === "FIRST_PAGE" ? "조회 조건을 유지하며 첫 페이지로 이동합니다." : "다음 페이지를 불러오고 있습니다." })
   const { run } = await guard(id)
-  try { await command(run.tabId, type) }
+  try { await command(run.tabId, { type }) }
   catch (error) {
     // Some sites close the message port as the actual document navigates.
     if (!/message port|receiving end|asynchronous response|frame was removed|context invalidated/i.test(String(error))) throw new CollectionFailure(error instanceof Error ? error.message : String(error), "navigation_failed")
@@ -156,7 +156,7 @@ export async function resumeHistoryRun() {
       }
       const { run: latest } = await guard(run.id)
       if (latest.visited.includes(page.fingerprint)) throw new CollectionFailure("이미 읽은 목록이 다시 나타나 중지했습니다. 저장한 기록은 유지됩니다.", "repeated_page")
-      const report = await command<SyncReport>(run.tabId, "SYNC_PAGE", run.id)
+      const report = await command(run.tabId, { type: "SYNC_PAGE", runId: run.id })
       if (!["ok", "partial", "empty"].includes(report.code)) throw new CollectionFailure(report.message, report.code === "login_required" ? "login_required" : report.code === "error" ? "unknown" : "list_unreadable")
       const progress = {
         pages: latest.pages + 1, processed: latest.processed + report.collected,

@@ -19,7 +19,7 @@ function send(event: SubmissionEvent) {
 }
 const application = applicationPage(location.href)
 function refreshPolicy() {
-  void rpc<{ enabled: boolean }>({ type: "submission_policy" }).then(policy => document.dispatchEvent(new CustomEvent("todaystart:submission-policy:v1", { detail: policy.enabled ? "enabled" : "disabled" }))).catch(() => undefined)
+  void rpc({ type: "submission_policy" }).then(policy => document.dispatchEvent(new CustomEvent("todaystart:submission-policy:v1", { detail: policy.enabled ? "enabled" : "disabled" }))).catch(() => undefined)
 }
 const jobkoreaDetail = platform === "jobkorea" && new DomPlatformAdapter(platform).isJobDetailPage(location.href)
 const jobkoreaListing = platform === "jobkorea" && new DomPlatformAdapter(platform).isJobListingPage(location.href) && !!publicPostingProfileFor(platform, location.href)
@@ -148,7 +148,7 @@ function sendCompletion(event: SubmissionEvent, key: string) {
     completionFailures.set(key, count)
     if (count <= 3) setTimeout(checkCompletion, 1000)
   }
-  void rpc<boolean>({ type: "submission", event }).then(saved => {
+  void rpc({ type: "submission", event }).then(saved => {
     if (saved) completionSent.add(key)
     // The posting and popup send from different documents. A visible result
     // can reach the worker just before its click/context message does.

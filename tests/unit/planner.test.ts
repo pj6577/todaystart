@@ -1,5 +1,5 @@
 import Dexie from "dexie"
-import { afterEach, beforeEach, expect, it } from "vitest"
+import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { ApplicationRepository, TodayStartDatabase } from "../../src/storage/repository"
 import { applicationIdentity } from "../../src/core/identity"
 import { calendarCells, upcomingEvents, EventDraftSchema, type EventDraft, type NoteDraft } from "../../src/core/planner"
@@ -11,6 +11,25 @@ beforeEach(() => { repository = new ApplicationRepository(new TodayStartDatabase
 afterEach(async () => { await repository.db.delete() })
 const noteDraft = (linkId?: string): NoteDraft => ({ id: crypto.randomUUID(), expectedRevision: 0, title: "면접 준비", body: "질문과 답변", pinned: false, checklist: [], linkId })
 const eventDraft = (linkId?: string): EventDraft => ({ id: crypto.randomUUID(), expectedRevision: 0, title: "1차 면접", kind: "interview", date: "2026-10-23", time: "14:00", status: "planned", location: "온라인", body: "준비하기", checklist: [], linkId })
+
+it("rolls back records and links when a later planner write fails during restore", async () => {
+  await repository.merge([record()])
+  const link = (await repository.plannerSnapshot()).links[0]!
+  await repository.saveNote(noteDraft(link.id))
+  await repository.saveEvent(eventDraft(link.id))
+  const backup = await repository.backup()
+  await repository.clear()
+  const write = vi.spyOn(repository.db.notes, "put").mockRejectedValueOnce(new Error("write failed"))
+  try { await expect(repository.restore(backup)).rejects.toThrow("write failed") }
+  finally { write.mockRestore() }
+  expect(await repository.list()).toEqual([])
+  expect(await repository.plannerSnapshot()).toEqual({ links: [], notes: [], events: [] })
+  await repository.restore(backup)
+  expect(await repository.list()).toHaveLength(1)
+  const restored = await repository.plannerSnapshot()
+  expect(restored.notes[0]?.linkId).toBe(restored.links[0]?.id)
+  expect(restored.events[0]?.linkId).toBe(restored.links[0]?.id)
+})
 
 it("backs up and restores sticker colors and multiple mention links, preserving text on unlink", async () => {
   const a = record(), b = record({ sourceApplicationId: "mention-other", companyName: "두 번째 기업" })

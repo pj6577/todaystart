@@ -1,34 +1,22 @@
-import Dexie, { type Table } from "dexie"
-import { z } from "zod"
 import { ApplicationSchema, ManualApplicationSchema, type ApplicationRecord } from "../core/model"
 import { normalizeCompanyName } from "../core/company"
 import { applicationIdentity, mergedRecord } from "../core/identity"
 import { jobIdFromUrl, safeJobUrl } from "../core/urls"
-import { ApplicationLinkSchema, CareerEventSchema, NoteSchema, NoteDraftSchema, EventDraftSchema, type ApplicationLink, type Note, type CareerEvent } from "../core/planner"
-import { noteLinkIds, validMentions } from "../core/note-mentions"
-import { emptyNoteBoard, NoteBoardSchema, NoteLayoutChangeSchema, orderedNoteIds, moveNote, type NoteBoard } from "../core/note-board"
+import { noteLinkIds } from "../core/note-mentions"
+import { TodayStartDatabase } from "./database"
+import { PlannerRepository } from "./planner-repository"
+import { BackupRepository } from "./backup-repository"
 
-export class TodayStartDatabase extends Dexie {
-  applications!: Table<ApplicationRecord, string>
-  applicationLinks!: Table<ApplicationLink, string>
-  notes!: Table<Note, string>
-  events!: Table<CareerEvent, string>
-  noteBoards!: Table<{ id: string; state: NoteBoard }, string>
-  constructor(name = "todaystart") {
-    super(name)
-    this.version(1).stores({ applications: "id, platform, normalizedCompanyName, appliedAt, sourceApplicationId, sourceJobId, status" })
-    this.version(2).stores({ applicationLinks: "id,&recordId,*aliases", notes: "id,linkId,updatedAt", events: "id,linkId,date,status" }).upgrade(async tx => {
-      const records = await tx.table("applications").toArray() as ApplicationRecord[]
-      await tx.table("applicationLinks").bulkPut(records.map(record => ({ id: crypto.randomUUID(), recordId: record.id, aliases: [record.id] })))
-    })
-    this.version(3).stores({ noteBoards: "id" })
-  }
-}
-const backupBase = { format: z.literal("todaystart"), exportedAt: z.string().datetime(), records: z.array(ApplicationSchema).max(50000) }
-export const BackupSchema = z.discriminatedUnion("version", [z.object({ ...backupBase, version: z.literal(1) }).strict(), z.object({ ...backupBase, version: z.literal(2), links: z.array(ApplicationLinkSchema).max(50000), notes: z.array(NoteSchema).max(10000), events: z.array(CareerEventSchema).max(10000), board: NoteBoardSchema.optional() }).strict()])
+export { TodayStartDatabase } from "./database"
+export { BackupSchema } from "./backup-schema"
 
 export class ApplicationRepository {
-  constructor(readonly db = new TodayStartDatabase()) {}
+  private readonly planner: PlannerRepository
+  private readonly backups: BackupRepository
+  constructor(readonly db = new TodayStartDatabase()) {
+    this.planner = new PlannerRepository(db)
+    this.backups = new BackupRepository(db, this)
+  }
   list() { return this.db.applications.toArray() }
   async createManual(input: unknown) {
     const draft = ManualApplicationSchema.parse(input)
@@ -127,63 +115,11 @@ export class ApplicationRepository {
     await this.db.applicationLinks.put({ id, recordId, aliases: [...new Set([...links.flatMap(link => link.aliases), ...previousIds, recordId])].slice(-200) })
     return id
   }
-  async plannerSnapshot() { return this.db.transaction("r", [this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards], async () => { const board = (await this.db.noteBoards.get("main"))?.state; return { links: await this.db.applicationLinks.toArray(), notes: await this.db.notes.toArray(), events: await this.db.events.toArray(), ...(board ? { board } : {}) } }) }
-  async changeNoteLayout(input: unknown) {
-    const change = NoteLayoutChangeSchema.parse(input)
-    return this.db.transaction("rw", [this.db.notes, this.db.noteBoards], async () => {
-      const notes = await this.db.notes.toArray(), board = (await this.db.noteBoards.get("main"))?.state || emptyNoteBoard()
-      if (!notes.some(note => note.id === change.id) || change.kind === "move" && change.beforeId && !notes.some(note => note.id === change.beforeId)) throw new Error("메모가 삭제되었어요. 보드를 다시 확인해 주세요.")
-      const next = { ...board, order: orderedNoteIds(notes, board), sizes: { ...board.sizes }, revision: board.revision + 1, updatedAt: new Date().toISOString() }
-      if (change.kind === "move") next.order = moveNote(next.order, change.id, change.beforeId)
-      else next.sizes[change.id] = change.size
-      await this.db.noteBoards.put({ id: "main", state: next }); return next
-    })
-  }
-  private async pruneNoteBoard() {
-    const stored = await this.db.noteBoards.get("main"); if (!stored) return
-    const ids = new Set(await this.db.notes.toCollection().primaryKeys()), board = stored.state
-    if (!ids.size) { await this.db.noteBoards.delete("main"); return }
-    await this.db.noteBoards.put({ id: "main", state: { ...board, order: board.order.filter(id => ids.has(id)), sizes: Object.fromEntries(Object.entries(board.sizes).filter(([id]) => ids.has(id))), revision: board.revision + 1, updatedAt: new Date().toISOString() } })
-  }
-  async saveNote(input: unknown) {
-    const draft = NoteDraftSchema.parse(input)
-    return this.db.transaction("rw", [this.db.notes, this.db.applicationLinks, this.db.noteBoards], async () => {
-      const current = await this.db.notes.get(draft.id)
-      if ((current?.revision || 0) !== draft.expectedRevision) throw new Error("다른 창에서 메모가 변경되었어요. 내용을 별도 메모로 저장하거나 최신 내용을 다시 확인해 주세요.")
-      if (draft.linkId && !await this.db.applicationLinks.get(draft.linkId)) throw new Error("연결된 지원 기록이 삭제되었어요. 일반 메모로 변경해 주세요.")
-      if (validMentions(draft.body, draft.mentions).length !== (draft.mentions || []).length) throw new Error("기업 언급 위치가 바뀌었어요. 해당 기업을 다시 선택해 주세요.")
-      for (const linkId of noteLinkIds(draft)) if (!await this.db.applicationLinks.get(linkId)) throw new Error("언급한 지원 기록이 삭제되었어요. 해당 기업 언급을 해제해 주세요.")
-      const { expectedRevision, ...fields } = draft, now = new Date().toISOString()
-      const note = NoteSchema.parse({ ...fields, revision: expectedRevision + 1, createdAt: current?.createdAt || now, updatedAt: now })
-      const board = (await this.db.noteBoards.get("main"))?.state
-      const previousNotes = await this.db.notes.toArray(), order = orderedNoteIds(previousNotes, board)
-      if (!current) { const pinned = new Set(previousNotes.filter(item => item.pinned).map(item => item.id)), firstOrdinary = order.findIndex(id => !pinned.has(id)); order.splice(firstOrdinary < 0 ? order.length : firstOrdinary, 0, note.id) }
-      if (note.pinned && !current?.pinned) { const index = order.indexOf(note.id); if (index >= 0) order.splice(index, 1); order.unshift(note.id) }
-      await this.db.notes.put(note)
-      if (!board || !current || current.pinned !== note.pinned) await this.db.noteBoards.put({ id: "main", state: { ...(board || emptyNoteBoard()), order, revision: (board?.revision || 0) + 1, updatedAt: now } })
-      return note
-    })
-  }
-  async saveEvent(input: unknown) {
-    const draft = EventDraftSchema.parse(input)
-    return this.db.transaction("rw", [this.db.events, this.db.applicationLinks], async () => {
-      const current = await this.db.events.get(draft.id)
-      if ((current?.revision || 0) !== draft.expectedRevision) throw new Error("다른 창에서 일정이 변경되었어요. 최신 일정을 다시 열어 주세요.")
-      if (draft.linkId && !await this.db.applicationLinks.get(draft.linkId)) throw new Error("연결된 지원 기록이 삭제되었어요. 연결을 해제해 주세요.")
-      const { expectedRevision, ...fields } = draft, now = new Date().toISOString()
-      const event = CareerEventSchema.parse({ ...fields, revision: expectedRevision + 1, createdAt: current?.createdAt || now, updatedAt: now })
-      await this.db.events.put(event); return event
-    })
-  }
-  async deletePlanner(kind: "note" | "event", id: string, revision: number) {
-    const table = kind === "note" ? this.db.notes : this.db.events
-    return this.db.transaction("rw", [table, this.db.notes, this.db.noteBoards], async () => {
-      const current = await table.get(id)
-      if (!current || current.revision !== revision) throw new Error("다른 창에서 내용이 변경되었어요. 최신 내용을 다시 확인해 주세요.")
-      await table.delete(id)
-      if (kind === "note") await this.pruneNoteBoard()
-    })
-  }
+  plannerSnapshot() { return this.planner.snapshot() }
+  changeNoteLayout(input: unknown) { return this.planner.changeNoteLayout(input) }
+  saveNote(input: unknown) { return this.planner.saveNote(input) }
+  saveEvent(input: unknown) { return this.planner.saveEvent(input) }
+  deletePlanner(kind: "note" | "event", id: string, revision: number) { return this.planner.deletePlanner(kind, id, revision) }
   async delete(id: string, linked: "keep" | "delete" = "keep") {
     await this.db.transaction("rw", [this.db.applications, this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards], async () => {
       const link = await this.db.applicationLinks.where("recordId").equals(id).first()
@@ -193,63 +129,10 @@ export class ApplicationRepository {
         await this.db.applicationLinks.delete(link.id)
       }
       await this.db.applications.delete(id)
-      if (linked === "delete") await this.pruneNoteBoard()
+      if (linked === "delete") await this.planner.pruneNoteBoard()
     })
   }
   async clear() { await this.db.transaction("rw", [this.db.applications, this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards], async () => { await this.db.applications.clear(); await this.db.applicationLinks.clear(); await this.db.notes.clear(); await this.db.events.clear(); await this.db.noteBoards.clear() }) }
-  async backup() { return this.db.transaction("r", [this.db.applications, this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards], async () => ({ format: "todaystart" as const, version: 2 as const, exportedAt: new Date().toISOString(), records: await this.list(), ...(await this.plannerSnapshot()) })) }
-  async restore(input: unknown) {
-    const backup = BackupSchema.parse(input)
-    if (backup.version === 2) {
-      for (const values of [backup.links, backup.notes, backup.events]) if (new Set(values.map(value => value.id)).size !== values.length) throw new Error("백업에 중복 식별자가 있습니다.")
-      const records = new Set(backup.records.map(record => record.id)), links = new Set(backup.links.map(link => link.id))
-      const noteIds = new Set(backup.notes.map(note => note.id))
-      if (backup.board && [...backup.board.order, ...Object.keys(backup.board.sizes)].some(id => !noteIds.has(id))) throw new Error("백업의 메모 배치를 확인해 주세요.")
-      if (new Set(backup.links.map(link => link.recordId)).size !== backup.links.length || backup.links.some(link => !records.has(link.recordId)) || [...backup.notes, ...backup.events].some(item => item.linkId && !links.has(item.linkId))) throw new Error("백업의 메모·일정 연결을 확인해 주세요.")
-      if (backup.notes.some(note => noteLinkIds(note).some(id => !links.has(id)) || validMentions(note.body, note.mentions).length !== (note.mentions || []).length)) throw new Error("백업의 기업 언급을 확인해 주세요.")
-    }
-    return this.db.transaction("rw", [this.db.applications, this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards], async () => {
-    const records: ApplicationRecord[] = [], restoredIds = new Map<string, string>()
-    for (const record of backup.records) {
-      const alias = await this.db.applicationLinks.where("aliases").equals(record.id).first()
-      const existing = await this.db.applications.get(record.id) || (alias ? await this.db.applications.get(alias.recordId) : undefined)
-      // Preserve identity for an existing, manually edited local record. Unrelated IDs cannot overwrite it.
-      const sameSource = existing && existing.platform === record.platform && (
-        (record.sourceApplicationId && record.sourceApplicationId === existing.sourceApplicationId) ||
-        (record.sourceJobId && record.sourceJobId === existing.sourceJobId && record.appliedAt === existing.appliedAt) ||
-        (alias?.recordId === existing.id && !record.sourceApplicationId && !existing.sourceApplicationId && record.sourceJobId === existing.sourceJobId && record.appliedAt === existing.appliedAt && normalizeCompanyName(record.companyName) === existing.normalizedCompanyName && record.jobTitle === existing.jobTitle && record.sourceCreatedAt === existing.sourceCreatedAt))
-      const restored = { ...record, id: sameSource ? existing!.id : applicationIdentity(record) }
-      records.push(restored); restoredIds.set(record.id, restored.id)
-    }
-    const result = await this.merge(records)
-    for (const [originalId, restoredId] of restoredIds) {
-      const local = await this.db.applicationLinks.where("recordId").equals(restoredId).first() || await this.db.applicationLinks.where("aliases").equals(restoredId).first()
-      if (local) { restoredIds.set(originalId, local.recordId); await this.db.applicationLinks.put({ ...local, aliases: [...new Set([...local.aliases, originalId])].slice(-200) }) }
-    }
-    if (backup.version === 2) {
-      const linkIds = new Map<string, string>()
-      for (const incoming of backup.links) {
-        const recordId = restoredIds.get(incoming.recordId)!
-        // Merge may promote an application ID. Its alias still resolves to the
-        // same stable link, including when restoring into an existing database.
-        const local = await this.db.applicationLinks.where("recordId").equals(recordId).first() || await this.db.applicationLinks.where("aliases").equals(recordId).first()
-        if (!local) throw new Error("복원한 지원 기록의 연결을 찾지 못했습니다.")
-        linkIds.set(incoming.id, local.id)
-      }
-      for (const note of backup.notes) {
-        const current = await this.db.notes.get(note.id)
-        if (!current || note.updatedAt > current.updatedAt) await this.db.notes.put({ ...note, linkId: note.linkId ? linkIds.get(note.linkId) : undefined, mentions: note.mentions?.map(mention => ({ ...mention, linkId: linkIds.get(mention.linkId)! })), revision: (current?.revision || 0) + 1 })
-      }
-      for (const event of backup.events) {
-        const current = await this.db.events.get(event.id)
-        if (!current || event.updatedAt > current.updatedAt) await this.db.events.put({ ...event, linkId: event.linkId ? linkIds.get(event.linkId) : undefined, revision: (current?.revision || 0) + 1 })
-      }
-    }
-    if (backup.version === 2 && backup.board) {
-      const local = (await this.db.noteBoards.get("main"))?.state
-      if (!local || backup.board.updatedAt > local.updatedAt) await this.db.noteBoards.put({ id: "main", state: { ...backup.board, revision: (local?.revision || 0) + 1 } })
-    }
-    return { ...result, notes: backup.version === 2 ? backup.notes.length : 0, events: backup.version === 2 ? backup.events.length : 0 }
-    })
-  }
+  backup() { return this.backups.backup() }
+  restore(input: unknown) { return this.backups.restore(input) }
 }

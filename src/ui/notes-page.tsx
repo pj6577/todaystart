@@ -34,7 +34,7 @@ export function NotesPage({ planner, records, onOpen, onNew, renderEditor, editi
     else optimistic.sizes[change.id] = change.size
     layoutRef.current = optimistic; setLayout(optimistic)
     try {
-      const saved = await rpc<NoteBoard>({ type: "note_layout", change, dataGeneration: generation })
+      const saved = await rpc({ type: "note_layout", change, dataGeneration: generation })
       if (pending.current === 1) { layoutRef.current = saved; setLayout(saved) }
     } catch (error) { setError(error instanceof Error ? error.message : "메모 배치를 저장하지 못했어요."); const latest = plannerRef.current.board || emptyNoteBoard(); layoutRef.current = latest; setLayout(latest) }
     finally { pending.current-- }

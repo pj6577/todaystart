@@ -1186,8 +1186,7 @@ test("실제 지원 경로만 표시·직접 추가 사이트 선택·통계와 
     await dialog.getByLabel("기업명", { exact: true }).fill(`선택 경로 기업 ${index}`)
     await dialog.getByLabel("지원 직무", { exact: true }).fill("프론트엔드 개발자")
     await dialog.getByLabel("지원 날짜", { exact: true }).fill("2026-10-19")
-    await dialog.getByRole("button", { name: "메모 더 보기", exact: true }).click()
-  await dialog.getByRole("radio", { name: site, exact: true }).check()
+    await dialog.getByRole("radio", { name: site, exact: true }).check()
     await expect(dialog.locator('input[type="radio"]:checked')).toHaveCount(1)
     await expect(dialog.getByLabel("경로 이름", { exact: true })).toHaveCount(0)
     if (site === "리멤버") await dialog.screenshot({ path: "docs/screenshots/manual-source-picker.png" })
@@ -1206,8 +1205,9 @@ test("실제 지원 경로만 표시·직접 추가 사이트 선택·통계와 
   await expect(ui.locator(".calendar-records")).toContainText("선택 경로 기업 0")
   await expect(ui.getByRole("button", { name: "월요일 지원 1건, 기간 내 100%", exact: true })).toBeVisible()
   const snapshot = await rpc<Snapshot>(ui, { type: "snapshot" })
-  const remember = snapshot.records.find(record => record.sourceLabel === "리멤버")!
-  expect(remember).toMatchObject({ platform: "manual", evidence: "manual" })
+  const remember = snapshot.records.find(record => record.platform === "remember")!
+  expect(remember).toMatchObject({ platform: "remember", evidence: "manual" })
+  expect(snapshot.records.find(record => record.sourceLabel === "점핏")).toMatchObject({ platform: "manual", evidence: "manual" })
   const wanted = snapshot.records.find(record => record.companyName === "선택 경로 기업 2")!
   expect(wanted).toMatchObject({ platform: "wanted", evidence: "manual" })
   const backup = await rpc(ui, { type: "backup" })
@@ -3152,6 +3152,30 @@ test("지연 렌더링과 컨테이너 교체 후에도 경고가 한 번만 표
   })
   await expect(jobs.locator("todaystart-warning")).toHaveCount(1)
   await expect(jobs.locator("todaystart-warning summary")).toHaveText(/지원 이력 있음/)
+})
+
+test("페이지 수명 (page lifecycle): 비동기 루트 교체와 페이지가 만든 종료 이벤트 후에도 관찰 유지", async ({ ui, context }) => {
+  await setup(ui)
+  await sync(ui, await open(context, "saramin", "history"))
+  const jobs = await open(context, "jobkorea", "jobs")
+  await expect(jobs.locator("todaystart-warning").first()).toBeVisible()
+  const warningCount = await jobs.locator("todaystart-warning").count()
+  const replacement = await jobs.evaluate(() => {
+    const root = document.querySelector("#j-recruit")!
+    const clone = root.cloneNode(true) as Element
+    clone.querySelectorAll("todaystart-warning,[data-todaystart-owned]").forEach(node => node.remove())
+    const anchor = document.createElement("div"); anchor.id = "replacement-anchor"
+    root.replaceWith(anchor)
+    return clone.outerHTML
+  })
+  // Force an observation while the root is absent, before its async replacement.
+  await pageMessage(ui, jobs.url(), "GET_PAGE")
+  expect(await jobs.locator("todaystart-warning").count()).toBe(0)
+  await jobs.evaluate(markup => { document.querySelector("#replacement-anchor")!.outerHTML = markup }, replacement)
+  await expect(jobs.locator("todaystart-warning")).toHaveCount(warningCount)
+  await jobs.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false })))
+  const response = await pageMessage<PageState>(ui, jobs.url(), "GET_PAGE")
+  expect(response.ok && response.data.matches).toBe(warningCount)
 })
 
 test("Service Worker 중지·재기동 이후에도 같은 지원 이력을 조회", async ({ ui, context }) => {

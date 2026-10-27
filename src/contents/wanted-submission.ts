@@ -42,7 +42,7 @@ function inspect() {
     const id = page.jobId
     if (completed.has(id) || completing.has(id) || (failures.get(id) || 0) >= 4) return
     completing.add(id)
-    void rpc<boolean>({ type: "submission", event: { kind: "wanted_completed", platform: "wanted", sourceJobId: id } }).then(saved => {
+    void rpc({ type: "submission", event: { kind: "wanted_completed", platform: "wanted", sourceJobId: id } }).then(saved => {
       if (saved) completed.add(id)
       else retry(id)
     }).catch(() => retry(id)).finally(() => completing.delete(id))
@@ -76,7 +76,7 @@ document.addEventListener("click", event => {
 }, true)
 
 function policy() {
-  void rpc<{ enabled: boolean }>({ type: "submission_policy" }).then(value => {
+  void rpc({ type: "submission_policy" }).then(value => {
     enabled = value.enabled
     failures.clear()
     inspect()
