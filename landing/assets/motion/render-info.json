@@ -1,0 +1,18 @@
+{
+  "source": "scripts/landing-motion/scene.html",
+  "width": 1440,
+  "height": 960,
+  "fps": 30,
+  "duration": 14,
+  "audio": false,
+  "data": "fictional presentation data; no account or browser records",
+  "themes": [
+    "dark",
+    "light"
+  ],
+  "formats": [
+    "webm/vp9",
+    "mp4/h264"
+  ],
+  "posterTime": 12.2
+}

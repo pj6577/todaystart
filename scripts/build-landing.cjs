@@ -42,6 +42,7 @@ const files = [
   ["landing/privacy.html", "privacy.html"],
   ["landing/styles.css", "styles.css"],
   ["landing/theme.js", "theme.js"],
+  ["landing/motion.js", "motion.js"],
   ["landing/assets/chrome.svg", "assets/chrome.svg"],
   ["assets/icon.svg", "assets/icon.svg"],
   ...[
@@ -70,6 +71,16 @@ const files = [
     `landing/assets/screens/dashboard-${theme}.png`,
     `assets/dashboard-${theme}.png`
   ]),
+  ...["light", "dark"].flatMap((theme) => [
+    ...["mp4", "webm"].map((format) => [
+      `landing/assets/motion/dashboard-${theme}.${format}`,
+      `assets/dashboard-motion-${theme}.${format}`
+    ]),
+    [
+      `landing/assets/motion/dashboard-${theme}-poster.png`,
+      `assets/dashboard-motion-${theme}-poster.png`
+    ]
+  ]),
   ["LICENSE", "LICENSE"],
   ["THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES.md"]
 ]
@@ -78,7 +89,7 @@ for (const [source, target] of files)
 // Fail the Pages build if a local asset, page or section link is missing.
 for (const file of ["index.html", "privacy.html"]) {
   const html = fs.readFileSync(path.join(destination, file), "utf8")
-  for (const [, reference] of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
+  for (const [, reference] of html.matchAll(/(?:src|href|poster)="([^"]+)"/g)) {
     if (/^https:\/\//.test(reference)) continue
     if (reference.startsWith("#")) {
       if (!html.includes(`id="${reference.slice(1)}"`))

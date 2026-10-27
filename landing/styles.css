@@ -450,14 +450,58 @@ p {
   overflow: hidden;
 }
 .hero-screen {
+  position: relative;
+  aspect-ratio: 3 / 2;
   border: 1px solid var(--image-border);
   border-radius: 12px;
   overflow: hidden;
-  max-height: 570px;
-  background: #fafafa;
+  background: var(--page);
 }
 .hero-screen img {
   width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.hero-screen video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  pointer-events: none;
+}
+.hero-screen video[data-ready="true"] {
+  opacity: 1;
+}
+.motion-toggle {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  background: var(--header-surface);
+  border: 1px solid var(--illustration-line);
+  border-radius: 50%;
+  backdrop-filter: blur(12px);
+}
+.motion-toggle:hover {
+  background: var(--surface-selected);
+}
+.motion-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+.motion-toggle .motion-play {
+  width: 16px;
+  margin-left: 2px;
+}
+.motion-toggle[data-playing="true"] .motion-play,
+.motion-toggle:not([data-playing="true"]) .motion-pause {
+  display: none;
 }
 .section-heading {
   text-align: center;
@@ -766,12 +810,14 @@ p {
 }
 /* Readable surfaces also work when backdrop-filter or transparency is disabled. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass {
+  .glass,
+  .motion-toggle {
     background: var(--surface-solid);
   }
 }
 @media (prefers-reduced-transparency: reduce) {
-  .glass {
+  .glass,
+  .motion-toggle {
     background: var(--surface-solid);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
@@ -811,9 +857,6 @@ p {
   }
   .hero h1 {
     font-size: 54px;
-  }
-  .hero-screen {
-    max-height: 440px;
   }
   .privacy-card {
     padding: 45px 35px 45px 15px;
@@ -917,9 +960,6 @@ p {
     padding: 5px;
     border-radius: 14px;
     transform: none;
-  }
-  .hero-screen {
-    max-height: 345px;
   }
   .hero-screen img {
     width: 100%;

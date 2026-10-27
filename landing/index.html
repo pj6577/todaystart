@@ -6,6 +6,7 @@
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#09090b" />
     <script src="./theme.js"></script>
+    <script src="./motion.js" defer></script>
     <meta
       name="description"
       content="여러 채용 사이트의 지원 기록을 한곳에. 이전 지원 확인부터 기업 메모와 면접 일정까지, 오늘시작으로 내 브라우저에서 관리하세요."
@@ -109,23 +110,47 @@
         </div>
         <div class="product-stage">
           <figure class="browser-frame glass">
-            <div class="hero-screen">
+            <div class="hero-screen" aria-label="오늘시작 대시보드 모션 그래픽">
               <img
                 class="screen-dark"
-                src="./assets/dashboard-dark.png"
-                width="2160"
-                height="1500"
-                alt="지원 현황, 기록 가져오기와 다가오는 일정을 함께 보여주는 오늘시작 대시보드"
+                src="./assets/dashboard-motion-dark-poster.png"
+                width="1440"
+                height="960"
+                alt="여러 사이트의 기록이 모이고, 지원 현황과 차트가 채워진 뒤 면접 일정으로 이어지는 오늘시작 대시보드"
                 fetchpriority="high"
               />
               <img
                 class="screen-light"
-                src="./assets/dashboard-light.png"
-                width="2160"
-                height="1500"
-                alt="지원 현황, 기록 가져오기와 다가오는 일정을 함께 보여주는 오늘시작 대시보드"
+                src="./assets/dashboard-motion-light-poster.png"
+                width="1440"
+                height="960"
+                alt="여러 사이트의 기록이 모이고, 지원 현황과 차트가 채워진 뒤 면접 일정으로 이어지는 오늘시작 대시보드"
                 loading="lazy"
               />
+              <video
+                data-motion-video
+                muted
+                loop
+                playsinline
+                preload="none"
+                width="1440"
+                height="960"
+                aria-hidden="true"
+              ></video>
+              <button
+                class="motion-toggle"
+                data-motion-toggle
+                type="button"
+                aria-label="영상 재생"
+                hidden
+              >
+                <svg class="motion-play" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 5 11 7-11 7z" />
+                </svg>
+                <svg class="motion-pause" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 5v14M16 5v14" />
+                </svg>
+              </button>
             </div>
           </figure>
         </div>
