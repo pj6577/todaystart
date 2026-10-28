@@ -28,7 +28,7 @@ beforeEach(() => {
   vi.stubGlobal("chrome", {
     runtime: { id: "extension", getURL: (path: string) => "chrome-extension://extension/" + path },
     storage: { local: {
-      get: async (key: string) => ({ [key]: local[key] }), set: async (value: object) => { Object.assign(local, value) }
+      get: async (keys: string | string[]) => Object.fromEntries((Array.isArray(keys) ? keys : [keys]).map(key => [key, structuredClone(local[key])])), set: async (value: object) => { Object.assign(local, value) }
     } }, tabs: { get: async () => ({ url: "https://www.wanted.co.kr/wd/999" }) }
   })
   handle = createRequestHandler({ repository, submissions })
@@ -105,6 +105,16 @@ it("does not retry a failed run owned by another tab", async () => {
   history.run = { id: "run", platform: "saramin", tabId: 8, status: "error", pages: 0, processed: 0, inserted: 0, updated: 0, skipped: 0, scope: "", message: "", startedAt: "2026-10-27T00:00:00Z", updatedAt: "2026-10-27T00:00:00Z" }
   await expect(handle({ type: "history_run", operation: "retry" }, site)).rejects.toThrow()
   expect(history.start).not.toHaveBeenCalled()
+})
+
+it("reconciles an imported completed application even without a materialized pending record", async () => {
+  const id = crypto.randomUUID()
+  local.submissionAttempts = [{ id, platform: "saramin", tabId: 7, frameId: 0, sourceJobId: "100", requestId: crypto.randomUUID(), stage: "unverified", reason: "timeout", startedAt: "2026-10-28T01:00:00Z", updatedAt: "2026-10-28T01:01:00Z" }]
+  const imported = record({ sourceApplicationId: "9000", appliedAt: "2026-10-28", collectedAt: "2026-10-28T01:05:00Z", lastSeenAt: "2026-10-28T01:05:00Z", lastSyncedAt: "2026-10-28T01:05:00Z" })
+  const report = await handle({ type: "collect", platform: "saramin", automatic: false, dataGeneration: local.dataGeneration, result: { code: "ok", records: [imported], skipped: 0, hasNextPage: false, scope: "현재 목록", message: "1건" } }, site)
+  expect(report).toMatchObject({ collected: 1, inserted: 1 })
+  expect(local.submissionAttempts).toMatchObject([{ id, stage: "confirmed", confirmationMethod: "history_page" }])
+  expect((await repository.list())[0]).toMatchObject({ sourceApplicationId: "9000", submissionAttemptId: id, submissionStage: "confirmed", evidence: "history_page" })
 })
 
 it("checks Wanted events against the live tab instead of a stale SPA sender URL", async () => {

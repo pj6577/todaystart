@@ -3,6 +3,7 @@ import { SubmissionTracker } from "../../src/submission/tracker"
 import { applicationPage, saraminCompletion, saraminResult } from "../../src/submission/model"
 import { ApplicationRepository, TodayStartDatabase } from "../../src/storage/repository"
 import { applicationIdentity } from "../../src/core/identity"
+import { record } from "../helpers"
 
 let repository: ApplicationRepository, tracker: SubmissionTracker, stored: Record<string, unknown>
 const jobId = "12345", requestId = "00000000-0000-4000-8000-000000000001"
@@ -113,6 +114,44 @@ it("사용자 확인과 이력 수집은 대기 기록을 해소한다", async (
   await repository.edit(pending.id, { companyName: pending.companyName, jobTitle: pending.jobTitle, appliedAt: "2026-10-20", status: "applied" })
   await tracker.reconcile()
   expect((await tracker.snapshot())[0]).toMatchObject({ stage: "confirmed", reason: "manual" })
+})
+it("잡코리아 최종 클릭만 관찰한 항목도 가져온 같은 공고·날짜의 지원 완료와 연결한다", async () => {
+  const popup = await jobkoreaMetadata()
+  await tracker.observe({ kind: "apply_clicked", platform: "jobkorea", sourceJobId: "51797123" }, popup)
+  await tracker.closeTab(1)
+  expect(await repository.list()).toHaveLength(0)
+  const attempt = (await tracker.snapshot())[0]!
+  const now = new Date(Date.now() + 1000).toISOString()
+  await repository.merge([record({ platform: "jobkorea", companyName: context.companyName, jobTitle: context.jobTitle, sourceJobId: "50194254", sourceApplicationId: "7800", jobUrl: "https://www.jobkorea.co.kr/Recruit/GI_Read/50194254", appliedAt: new Date(Date.parse(attempt.clickedAt!) + 9 * 3600000).toISOString().slice(0, 10), collectedAt: now, lastSeenAt: now, lastSyncedAt: now })])
+  await tracker.reconcile()
+  expect((await tracker.snapshot())[0]).toMatchObject({ stage: "confirmed", reason: "success" })
+  expect((await repository.list())[0]).toMatchObject({ submissionAttemptId: attempt.id, submissionStage: "confirmed", evidence: "history_page" })
+})
+it("같은 공고의 이력 제목이 달라도 대기를 해소하고 연결한 메모를 보존한다", async () => {
+  await metadata(); await submitting()
+  const attempt = (await tracker.snapshot())[0]!, pending = (await repository.list())[0]!
+  const link = (await repository.plannerSnapshot()).links.find(value => value.recordId === pending.id)!
+  const note = await repository.saveNote({ id: crypto.randomUUID(), expectedRevision: 0, title: "연결한 메모", body: "보존할 내용", pinned: false, checklist: [], linkId: link.id })
+  const now = new Date(Date.now() + 1000).toISOString()
+  await repository.merge([record({ companyName: context.companyName, jobTitle: `${context.jobTitle} (~12/31)`, sourceJobId: jobId, sourceApplicationId: "7900", jobUrl: context.jobUrl, appliedAt: new Date(Date.parse(attempt.startedAt) + 9 * 3600000).toISOString().slice(0, 10), collectedAt: now, lastSeenAt: now, lastSyncedAt: now })])
+  expect(await repository.list()).toHaveLength(2)
+  // Reopening the manager must also heal records imported before this fix.
+  expect((await tracker.snapshot())[0]).toMatchObject({ stage: "confirmed", reason: "success" })
+  const records = await repository.list(), planner = await repository.plannerSnapshot()
+  expect(records).toHaveLength(1)
+  expect(records[0]).toMatchObject({ sourceApplicationId: "7900", submissionAttemptId: attempt.id, submissionStage: "confirmed", evidence: "history_page" })
+  const savedNote = planner.notes.find(value => value.id === note.id)!
+  expect(savedNote.body).toBe("보존할 내용")
+  expect(planner.links.find(value => value.id === savedNote.linkId)?.recordId).toBe(records[0]!.id)
+})
+it("지원 현황으로 확정한 뒤 늦게 공고 정보가 도착해도 API 성공 기록으로 다시 만들지 않는다", async () => {
+  await submitting()
+  const attempt = (await tracker.snapshot())[0]!, now = new Date(Date.now() + 1000).toISOString()
+  await repository.merge([record({ companyName: context.companyName, jobTitle: `${context.jobTitle} 변경 제목`, sourceJobId: jobId, sourceApplicationId: "8100", jobUrl: context.jobUrl, appliedAt: new Date(Date.parse(attempt.startedAt) + 9 * 3600000).toISOString().slice(0, 10), collectedAt: now, lastSeenAt: now, lastSyncedAt: now })])
+  expect((await tracker.snapshot())[0]).toMatchObject({ stage: "confirmed", confirmationMethod: "history_page" })
+  await metadata()
+  expect(await repository.list()).toHaveLength(1)
+  expect((await repository.list())[0]).toMatchObject({ evidence: "history_page", sourceApplicationId: "8100", jobTitle: `${context.jobTitle} 변경 제목` })
 })
 it.each([
   { code: "fail", recruitapply_idx: "1", rec_idx: jobId },

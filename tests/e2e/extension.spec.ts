@@ -1170,6 +1170,31 @@ test("대시보드 사이트 심벌과 가져오기 버튼: 직접 수집 시작
   await expect(ui).toHaveURL(initialUrl)
 })
 
+test("지원 현황 대조: 가져온 네 건이 확인 필요 안내를 해소하고 새로고침 후에도 중복되지 않음", async ({ ui }) => {
+  const attempts = ["jobkorea", "jobkorea", "jobkorea", "saramin"].map((platform, i) => {
+    const publicId = String(701 + i), internalId = String(801 + i)
+    return { id: crypto.randomUUID(), platform, tabId: 999900 + i, frameId: 0, sourceJobId: platform === "jobkorea" ? internalId : publicId,
+      context: { sourceJobId: publicId, ...(platform === "jobkorea" ? { internalGiNo: internalId } : {}), companyName: `가상 대조 기업 ${i + 1}`, jobTitle: "지원 당시 공고 제목", jobUrl: platform === "jobkorea" ? `https://www.jobkorea.co.kr/Recruit/GI_Read/${publicId}` : `https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=${publicId}` },
+      ...(platform === "jobkorea" ? { clickedAt: "2026-10-28T01:00:00Z" } : { requestId: crypto.randomUUID() }),
+      stage: "unverified", reason: "timeout", startedAt: "2026-10-28T01:00:00Z", updatedAt: "2026-10-28T01:01:00Z" }
+  })
+  const pending = record({ platform: "saramin", sourceJobId: "704", sourceApplicationId: undefined, submissionAttemptId: attempts[3]!.id, status: "pending_confirmation", submissionStage: "unverified", evidence: "submission_attempt", companyName: "가상 대조 기업 4", jobTitle: "지원 당시 공고 제목", appliedAt: undefined, collectedAt: "2026-10-28T01:00:00Z" })
+  await rpc(ui, { type: "restore", backup: { format: "todaystart", version: 1, exportedAt: new Date().toISOString(), records: [pending] } })
+  await ui.evaluate(async attempts => chrome.storage.local.set({ submissionAttempts: attempts, revision: crypto.randomUUID() }), attempts)
+  await ui.getByRole("button", { name: "지원 기록 관리", exact: true }).click()
+  await expect(ui.getByRole("region", { name: "지원 진행 상태", exact: true }).locator(".submission-item")).toHaveCount(4)
+  const imported = attempts.map((attempt, i) => record({ platform: attempt.platform as "jobkorea" | "saramin", sourceJobId: attempt.context.sourceJobId, sourceApplicationId: String(9000 + i), companyName: attempt.context.companyName, jobTitle: "가져온 지원 현황의 공고 제목", jobUrl: attempt.context.jobUrl, appliedAt: "2026-10-28", collectedAt: "2026-10-28T01:05:00Z", lastSeenAt: "2026-10-28T01:05:00Z", lastSyncedAt: "2026-10-28T01:05:00Z" }))
+  await rpc(ui, { type: "restore", backup: { format: "todaystart", version: 1, exportedAt: new Date().toISOString(), records: imported } })
+  await expect(ui.getByRole("region", { name: "지원 진행 상태", exact: true })).toHaveCount(0)
+  const snapshot = await rpc<Snapshot>(ui, { type: "snapshot" })
+  expect(snapshot.records).toHaveLength(4)
+  expect(snapshot.records.every(record => record.status === "applied" && record.evidence === "history_page" && record.submissionAttemptId && record.submissionStage === "confirmed")).toBe(true)
+  expect(snapshot.submissionAttempts?.every(attempt => attempt.stage === "confirmed" && attempt.confirmationMethod === "history_page")).toBe(true)
+  await ui.reload()
+  await expect(ui.getByRole("region", { name: "지원 진행 상태", exact: true })).toHaveCount(0)
+  expect((await rpc<Snapshot>(ui, { type: "snapshot" })).records).toHaveLength(4)
+})
+
 test("직접 추가: 이전 백그라운드의 메타데이터 거절은 재시작 안내와 입력 유지 후 안전하게 재시도", async ({ ui }) => {
   const attemptId = crypto.randomUUID(), generation = crypto.randomUUID()
   await ui.evaluate(async ({ attemptId, generation }) => chrome.storage.local.set({ dataGeneration: generation, submissionAttempts: [

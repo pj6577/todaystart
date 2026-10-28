@@ -5,6 +5,8 @@ import type { ApplicationRepository } from "../storage/repository"
 import { SubmissionStore } from "./store"
 import { attachSubmissionContexts } from "./context-links"
 import { submissionSource, dispatchSubmission } from "./events"
+import type { ApplicationRecord } from "../core/model"
+import { importedSubmissionMatches } from "./history-reconciliation"
 
 const kstDay = (iso: string) => new Date(Date.parse(iso) + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
@@ -14,6 +16,9 @@ export class SubmissionTracker {
   private readonly store = new SubmissionStore()
   constructor(private readonly repository: ApplicationRepository) {}
   private async materialize(attempt: SubmissionAttempt) {
+    // An imported application already supplies the authoritative record/date.
+    // A later context event must not recreate it as an observed API success.
+    if (attempt.confirmationMethod === "history_page") return
     if (!attempt.context || attempt.stage === "started" || (!attempt.requestId && attempt.stage !== "confirmed")) return
     const now = attempt.updatedAt
     const record = {
@@ -41,6 +46,7 @@ export class SubmissionTracker {
         await this.materialize(attempt); changed = true
       }
     }
+    if (await this.reconcileAttempts(attempts)) changed = true
     if (changed) await this.store.save(attempts)
     return attempts
   }
@@ -63,12 +69,31 @@ export class SubmissionTracker {
   }
   async reconcile() {
     const { attempts } = await this.store.read()
+    if (await this.reconcileAttempts(attempts)) await this.store.save(attempts)
+  }
+  private async reconcileAttempts(attempts: SubmissionAttempt[]) {
+    if (!attempts.some(attempt => attempt.stage !== "confirmed")) return false
     const records = await this.repository.list()
+    const imported = importedSubmissionMatches(attempts, records)
+    const linked = new Map<string, ApplicationRecord>()
+    for (const record of records) if (record.submissionAttemptId && record.status === "applied") linked.set(record.submissionAttemptId, record)
     let changed = false
     for (const attempt of attempts) {
-      const record = records.find(value => value.submissionAttemptId === attempt.id && value.status === "applied")
-      if (record && attempt.stage !== "confirmed") { attempt.stage = "confirmed"; attempt.reason = record.evidence === "manual" ? "manual" : "success"; attempt.updatedAt = new Date().toISOString(); changed = true }
+      if (attempt.stage === "confirmed") continue
+      const owned = linked.get(attempt.id)
+      const explicit = owned?.platform === attempt.platform ? owned : undefined
+      const record = explicit || imported.get(attempt.id)
+      if (!record) continue
+      if (!explicit) {
+        // Reuse the imported record and its date/evidence. merge also preserves
+        // planner links while removing a pending record for this exact attempt.
+        await this.repository.merge([{ ...record, submissionAttemptId: attempt.id, submissionStage: "confirmed" }])
+        await chrome.storage.local.set({ revision: crypto.randomUUID() })
+      }
+      attempt.stage = "confirmed"; attempt.reason = record.evidence === "manual" ? "manual" : "success"; attempt.updatedAt = new Date().toISOString()
+      if (record.evidence === "history_page") attempt.confirmationMethod = "history_page"
+      changed = true
     }
-    if (changed) await this.store.save(attempts)
+    return changed
   }
 }
