@@ -14,6 +14,7 @@ import { HistoryReadiness } from "../collection/history-readiness"
 import { collectionPolicy } from "../collection/policy"
 import { CollectionIndicator } from "../ui/collection-indicator"
 import { WantedHistoryReader } from "../platforms/wanted-history"
+import { SaraminApplyLayer } from "../platforms/saramin-apply-layer"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://www.saramin.co.kr/*", "https://www.jobkorea.co.kr/*", "https://www.wanted.co.kr/*", "https://profile.rememberapp.co.kr/*", "https://career.rememberapp.co.kr/*"],
@@ -45,6 +46,9 @@ const lifecycle = new PageLifecycle({
   discoveryDuration: () => pageKind() === "history" ? collectionPolicy.historyReadyTimeoutMs : 15000,
   needsRepair: () => warnings.needsRepair()
 })
+const applyLayer = platform === "saramin" ? new SaraminApplyLayer(lifecycle.schedule) : undefined
+applyLayer?.start()
+lifecycle.addCleanup(() => applyLayer?.dispose())
 
 const handlePageCommand = createPageCommandHandler({ platform, adapter: () => adapter, snapshot: () => snapshot, state: () => state, pageKind, sync, collectHistory, refreshSnapshot, refresh })
 
@@ -163,10 +167,10 @@ async function refresh() {
       message: "사이트 화면 검증이 필요합니다. 설정에서 선택자 파일을 등록해 주세요." }
     if (adapter.profile) state.message = kind === "history" ? "현재 화면의 지원 내역을 가져올 수 있습니다." : "현재 화면을 확인했습니다. 저장된 이력이 없으면 중복 여부를 판단할 수 없습니다."
     if ((kind === "listing" || kind === "detail") && postingProfile) {
-      const result = warnings.render(adapter.extractJobPostings(document), snapshot!.records, settings, kind)
+      const result = warnings.render(adapter.extractJobPostings(document), snapshot!.records, settings, kind, applyLayer?.isOpen())
       state.matches = result.matches
       state.message = result.message
-    } else warnings.clear()
+    } else if (!applyLayer?.isOpen()) warnings.clear()
     if (kind === "history") {
       const result = await collectHistory()
       state.collectionCode = result.code

@@ -27,6 +27,7 @@ docs/*
 !docs/optimization-and-open-source.md
 !docs/validation-0.9.3.md
 !docs/validation-0.10.0.md
+!docs/validation-saramin-completion-layout.md
 !docs/secret-audit-2026-10-27.md
 !docs/images/
 

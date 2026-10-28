@@ -10,6 +10,7 @@ import { publicPostingPages } from "../../src/platforms/public-postings"
 import { wantedInspectedHistory, wantedInspectedResponse } from "../fixtures/wanted-inspected-history"
 import type { PageState } from "../../src/core/model"
 import { saraminSubmissionPage, saraminSubmissionDetail, jobkoreaSubmissionDetail, jobkoreaSubmissionPage } from "../fixtures/submission-flow"
+import { saraminCompletionLayoutDetail, saraminCompletionLayoutFrame } from "../fixtures/saramin-completion-layout"
 
 const test = base.extend<{ context: BrowserContext; ui: Page; extensionId: string }>({
   context: async ({}, use) => {
@@ -326,6 +327,39 @@ test(`이력 안내 글자 대비: ${theme} ${scheme}`, async ({ ui, context }) 
   await page.screenshot({ path: `test-results/warning-contrast-${theme}-${scheme}.png` })
 })
 }
+
+test("사람인 완료창: 기록 저장 후에도 스크롤·딤·닫기 위치 유지, 닫은 뒤 이력 표시", async ({ ui, context }) => {
+  await context.route("https://www.saramin.co.kr/**", route => route.fulfill({ contentType: "text/html; charset=utf-8", body: new URL(route.request().url()).pathname.endsWith("/complete") ? saraminCompletionLayoutFrame : saraminCompletionLayoutDetail }))
+  const page = await context.newPage()
+  await page.setViewportSize({ width: 1919, height: 943 })
+  await page.goto("https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=12345")
+  await expect.poll(async () => (await ui.evaluate(() => chrome.storage.local.get("submissionContexts"))).submissionContexts).toBeTruthy()
+  await page.evaluate(() => scrollTo(0, 900))
+  // Let the browser choose its scroll anchor before opening the native layer.
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+  await page.locator("#open-completion").evaluate(button => (button as HTMLButtonElement).click())
+  await expect(page.frameLocator("#quick_apply_frame").getByRole("heading", { name: "입사지원 완료!" })).toBeVisible()
+  await expect.poll(async () => (await rpc<Snapshot>(ui, { type: "snapshot" })).records[0]?.status).toBe("applied")
+  // Force a completed content-script refresh; an unchanged result must not hide
+  // the race behind Playwright's waiting for the background alone.
+  await expect.poll(async () => {
+    const result = await pageMessage<PageState>(ui, page.url(), "GET_PAGE")
+    return result.ok ? result.data.matches : undefined
+  }).toBe(1)
+  const bounds = await page.locator("#iframe_layer").boundingBox()
+  expect(bounds?.y).toBe(0)
+  expect(bounds?.height).toBe(943)
+  expect(await page.evaluate(() => scrollY)).toBe(900)
+  await expect(page.locator("todaystart-warning")).toHaveCount(0)
+  const close = page.getByRole("button", { name: "지원 완료창 닫기" })
+  await expect(close).toBeInViewport()
+  await page.frameLocator("#quick_apply_frame").getByRole("button", { name: "추천 공고 확인" }).click()
+  await page.screenshot({ path: "test-results/saramin-completion-stable.png" })
+  await close.click()
+  await expect(page.locator("#iframe_layer")).toBeHidden()
+  await expect(page.locator("todaystart-warning")).toContainText("사람인 지원 이력 있음")
+  expect(await count(ui)).toBe(1)
+})
 
 for (const transport of ["fetch", "xhr"] as const) {
   test(`최종 제출 관찰: 사람인 iframe ${transport}, 실패 응답 → 재시도 성공 → 한 건 승격`, async ({ ui, context }) => {
