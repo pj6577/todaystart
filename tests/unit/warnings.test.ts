@@ -36,6 +36,69 @@ it("표에서는 안내를 공고 위의 정상 tr/td로 삽입한다", () => {
   expect(row.previousElementSibling?.querySelector("td")?.colSpan).toBe(2)
   expect(row.previousElementSibling?.querySelector("todaystart-warning")).not.toBeNull()
 })
+
+it("상세 페이지의 같은 위치에서 삽입기가 다시 실행돼도 기존 안내를 갱신한다", () => {
+  document.body.innerHTML = '<header><h1>공고</h1></header>'
+  const header = document.querySelector("header")!
+  const first = new WarningInjector(), second = new WarningInjector()
+  first.render([posting(header)], () => found, true)
+  const host = document.querySelector("todaystart-warning")!
+  second.render([posting(header)], () => found, true)
+  expect(document.querySelectorAll("todaystart-warning")).toHaveLength(1)
+  expect(document.querySelector("todaystart-warning")).toBe(host)
+  second.render([posting(header)], () => [{ ...found[0]!, record: record({ jobTitle: "갱신된 직무" }) }], true)
+  expect(document.querySelectorAll("todaystart-warning")).toHaveLength(1)
+  expect(host.shadowRoot?.textContent).toContain("갱신된 직무")
+})
+
+it("상세 안내가 복제되면 변경 없는 갱신에서도 복구 필요를 감지하고 하나만 남긴다", () => {
+  document.body.innerHTML = '<header><h1>공고</h1></header>'
+  const header = document.querySelector("header")!, injector = new WarningInjector()
+  injector.render([posting(header)], () => found, true)
+  const host = document.querySelector("todaystart-warning")!
+  host.after(host.cloneNode(true))
+  expect(injector.needsRepair()).toBe(true)
+  injector.render([posting(header)], () => found, true)
+  expect(document.querySelectorAll("todaystart-warning")).toHaveLength(1)
+  expect(document.querySelector("todaystart-warning")).toBe(host)
+  expect(injector.needsRepair()).toBe(false)
+})
+
+it("표와 목록의 감싸는 노드도 재실행 시 중복하지 않는다", () => {
+  document.body.innerHTML = '<table><tbody><tr><td>공고</td></tr></tbody></table><ul><li id="posting">공고</li></ul>'
+  const row = document.querySelector("tr")!, item = document.querySelector("#posting")!
+  const first = new WarningInjector(), second = new WarningInjector()
+  first.render([posting(row), posting(item)], () => found, true)
+  second.render([posting(row), posting(item)], () => found, true)
+  expect(document.querySelectorAll("todaystart-warning")).toHaveLength(2)
+  expect(document.querySelectorAll('[data-todaystart-owned="warning-row"]')).toHaveLength(1)
+  expect(document.querySelectorAll('[data-todaystart-owned="warning-item"]')).toHaveLength(1)
+})
+
+it("안내 위치가 새 헤더로 넘어가도 재사용한 안내를 이전 헤더 정리 중 삭제하지 않는다", () => {
+  document.body.innerHTML = '<header><h1>공고</h1></header>'
+  const header = document.querySelector("header")!, injector = new WarningInjector()
+  injector.render([posting(header)], () => found, true)
+  const host = document.querySelector("todaystart-warning")!, replacement = header.cloneNode(true) as Element
+  header.replaceWith(replacement)
+  injector.render([posting(replacement)], () => found, true)
+  expect(document.querySelectorAll("todaystart-warning")).toHaveLength(1)
+  expect(document.querySelector("todaystart-warning")).toBe(host)
+  expect(host.isConnected).toBe(true)
+})
+
+it("목록에서 상세 보기로 바꾸면 안내를 펼치고 이후 갱신에서는 사용자의 접기 상태를 유지한다", () => {
+  document.body.innerHTML = '<article><h1>공고</h1></article>'
+  const card = document.querySelector("article")!, injector = new WarningInjector()
+  injector.render([posting(card)], () => found, false)
+  injector.render([posting(card)], () => found, true)
+  const details = document.querySelector("todaystart-warning")!.shadowRoot!.querySelector("details")!
+  expect(details.open).toBe(true)
+  details.open = false
+  injector.setTheme("dark")
+  injector.render([posting(card)], () => found, true)
+  expect(document.querySelector("todaystart-warning")!.shadowRoot!.querySelector("details")!.open).toBe(false)
+})
 it("keeps diagnostic match codes out of exact-match guidance and explains uncertain names plainly", () => {
   document.body.innerHTML = '<article><h2>공고</h2></article>'
   const card = document.querySelector("article")!

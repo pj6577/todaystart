@@ -75,6 +75,20 @@ export class DomPlatformAdapter implements JobPlatformAdapter {
       return posting
     }).filter((posting): posting is JobPosting => !!posting)
     if (!postings.length) { const posting = fallback(); if (posting) postings.push(posting) }
+    // A canonical detail URL describes one posting. Responsive/sticky headers
+    // may repeat that same company/title after submission or a React update.
+    if (profile.usePageUrl && this.isJobDetailPage(doc.URL) && postings.length > 1) {
+      const shown = postings.filter(posting => {
+        const element = posting.element
+        if (!element || element.closest('[hidden],[inert],[aria-hidden="true"]')) return false
+        if (doc.defaultView) for (let parent: Element | null = element; parent; parent = parent.parentElement) {
+          const style = doc.defaultView.getComputedStyle(parent)
+          if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse" || style.opacity === "0") return false
+        }
+        return true
+      })
+      return [shown.find(posting => !!posting.element?.getClientRects().length) || shown[0] || postings[0]!]
+    }
     return postings
   }
   detectApplicationSuccess(doc: Document): boolean {

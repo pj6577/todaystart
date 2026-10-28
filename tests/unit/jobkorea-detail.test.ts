@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest"
 import { DomPlatformAdapter } from "../../src/platforms/adapter"
-import { hasJobkoreaCompletion, hasJobkoreaCompletionTransition } from "../../src/submission/completion-marker"
+import { hasJobkoreaCompletion, hasJobkoreaCompletionTransition, hasJobkoreaResultHeading, jobkoreaAdditionalControls } from "../../src/submission/completion-marker"
 
 const url = "https://www.jobkorea.co.kr/Recruit/GI_Read/50167228"
 const title = "[셀파트너랩스] AI 커머스 스타트업 프론트엔드 개발자 모집"
@@ -23,6 +23,13 @@ it("추천 기업만 있는 상세 페이지에서는 공고 정보를 만들지
   doc.querySelector('[data-sentry-component="Title"]')?.remove()
   expect(new DomPlatformAdapter("jobkorea").extractJobPostings(doc)).toEqual([])
 })
+
+it("상세 페이지의 동일 공고 헤더가 두 레이아웃에 있어도 공고는 하나로 읽는다", () => {
+  const header = '<div><div><section data-sentry-component="CompanyName"><h2>가상 기업</h2></section><section data-sentry-component="TitleContent"><h1>가상 직무</h1></section></div></div>'
+  const doc = new DOMParser().parseFromString(`<main><header data-sentry-component="Title">${header}${header}</header></main>`, "text/html")
+  Object.defineProperty(doc, "URL", { value: url })
+  expect(new DomPlatformAdapter("jobkorea").extractJobPostings(doc)).toHaveLength(1)
+})
 function completion(html: string) {
   document.body.innerHTML = html
   vi.spyOn(Element.prototype, "getClientRects").mockReturnValue([{}] as unknown as DOMRectList)
@@ -44,6 +51,44 @@ it("최종 클릭 뒤 같은 버튼이 추가지원으로 바뀌면 추적 속�
   const before = new Set<Element>()
   document.querySelector("button")!.textContent = "추가지원"
   expect(hasJobkoreaCompletionTransition(document, before)).toBe(true)
+})
+
+it.each([
+  '<input type="button" value="추가지원" data-applymode="ONLINE" data-activity="APPLY_COMPLETE">',
+  '<a role="button" data-applymode="ONLINE" data-activity="APPLY_COMPLETE">추가지원</a>',
+  '<div role="button" aria-label="추가지원" data-applymode="ONLINE" data-activity="APPLY_COMPLETE"></div>'
+])("의미가 같은 완료 컨트롤의 태그가 바뀌어도 확인한다: %s", html => {
+  expect(completion(html)).toBe(true)
+})
+
+it("숨겨진 추가지원 템플릿이 실제 클릭 뒤 표시되면 새 완료 전환으로 인식한다", () => {
+  completion('<div hidden><input type="button" value="추가지원"></div>')
+  const before = new Set(jobkoreaAdditionalControls(document))
+  expect(before.size).toBe(0)
+  document.querySelector("div")!.hidden = false
+  expect(hasJobkoreaCompletionTransition(document, before)).toBe(true)
+})
+
+it.each([
+  '<h1>입사지원이 완료되었습니다.</h1>',
+  '<h3>입사지원이 정상적으로 완료되었습니다!</h3>',
+  '<div role="status">입사 지원 완료!</div>'
+])("공고 번호가 있는 결과 화면에 사용할 명시적인 완료 문구를 인식한다: %s", html => {
+  completion(html)
+  expect(hasJobkoreaResultHeading(document)).toBe(true)
+})
+
+it.each([
+  '<h1>입사지원 완료 후 확인해 주세요</h1>',
+  '<h1>입사지원에 실패했습니다.</h1>',
+  '<h1>입사지원이 완료되지 않았습니다.</h1>',
+  '<h1 hidden>입사지원이 완료되었습니다.</h1>',
+  '<div style="display:none"><h2>입사지원 완료!</h2></div>',
+  '<p>입사지원이 완료되었습니다.</p>',
+  '<h1>지원 완료</h1>'
+])("안내·실패·숨긴 문구와 일반 문장은 완료 근거로 사용하지 않는다: %s", html => {
+  completion(html)
+  expect(hasJobkoreaResultHeading(document)).toBe(false)
 })
 it("클릭 전에 이미 있던 추가지원과 숨겨진 추가지원은 전환으로 세지 않는다", () => {
   completion('<button data-applymode="ONLINE" data-activity="APPLY_COMPLETE">추가지원</button><button>지원하기</button>')

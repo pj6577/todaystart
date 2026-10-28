@@ -440,11 +440,21 @@ test(`최종 제출 관찰: 잡코리아 서로 다른 ID, ${popupKind} 팝업 f
   await ui.getByRole("button", { name: "지원 기록 관리", exact: true }).click()
   await expect(ui.getByRole("region", { name: "지원 진행 상태" })).toContainText("완료 표시를 아직 확인할 수 없어")
   await ui.screenshot({ path: "docs/screenshots/submission-jobkorea-unverified.png", fullPage: true })
+  await ui.clock.setFixedTime(new Date("2026-10-28T15:30:00Z"))
+  await ui.getByRole("button", { name: "완료 여부 확인", exact: true }).click()
+  await expect(ui.getByRole("dialog").getByLabel("지원 날짜")).toHaveValue("2026-10-29")
+  await ui.getByRole("dialog").getByRole("button", { name: "취소", exact: true }).click()
+  expect((await rpc<Snapshot>(ui, { type: "snapshot" })).records[0]?.appliedAt).toBeUndefined()
   await ui.getByRole("button", { name: "완료 여부 확인", exact: true }).click()
   await ui.getByRole("dialog").getByLabel("지원 날짜").fill("2026-10-20")
   await ui.getByRole("dialog").getByLabel("상태").selectOption("applied")
   await ui.getByRole("button", { name: "변경 저장", exact: true }).click()
-  expect((await rpc<Snapshot>(ui, { type: "snapshot" })).submissionAttempts?.[0]).toMatchObject({ stage: "confirmed", reason: "manual" })
+  const saved = await rpc<Snapshot>(ui, { type: "snapshot" })
+  expect(saved.records[0]?.appliedAt).toBe("2026-10-20")
+  expect(saved.submissionAttempts?.[0]).toMatchObject({ stage: "confirmed", reason: "manual" })
+  await expect(ui.getByRole("button", { name: `${saved.records[0]!.companyName} ${saved.records[0]!.jobTitle} 상태 수정`, exact: true })).toBeVisible()
+  await ui.getByRole("button", { name: `${saved.records[0]!.companyName} ${saved.records[0]!.jobTitle} 수정`, exact: true }).click()
+  await expect(ui.getByRole("dialog").getByLabel("지원 날짜")).toHaveValue("2026-10-20")
 })
 }
 
@@ -483,13 +493,48 @@ for (const outcome of ["unverified", "confirmed"] as const) {
 }
 
 const jobkoreaCompletionButton = '<div class="page-footer"><button type="button" class="footer-btn apply-button devApplyMultiBtn" disabled onclick="handleMultiApplyClick(event)" data-sc="9" data-applymode="ONLINE" data-activity="APPLY_COMPLETE"><span>추가지원</span></button></div>'
-for (const mode of ["popup", "iframe", "search", "reload-pending", "wrong-gno", "no-marker", "initial-result"] as const) {
+
+test("잡코리아 반복 제출창: 닫힌 이전 결과가 현재 완료 감지를 막지 않음", async ({ ui, context }) => {
+  const publicId = "50194254", internalId = "51797123"
+  await context.route("https://www.jobkorea.co.kr/**", route => {
+    const pathname = new URL(route.request().url()).pathname
+    const body = pathname === "/Recruit/OnPass/OnPassApply" ? '<h1>가상 결과 확인 중</h1>' : pathname === "/Recruit/OnPass" ? jobkoreaSubmissionPage : jobkoreaSubmissionDetail.replace('<a target="_blank" href="/Recruit/OnPass?giNo=12345">지원창 열기</a>', `<button onclick="window.open('/Recruit/OnPass?giNo=${internalId}','_blank','noopener')">지원창 열기</button><div id="result"></div>`)
+    return route.fulfill({ contentType: "text/html; charset=utf-8", body })
+  })
+  const source = await context.newPage(), sourceUrl = `https://www.jobkorea.co.kr/Recruit/GI_Read/${publicId}`
+  await source.goto(sourceUrl)
+  await pageMessage(ui, sourceUrl, "GET_PAGE")
+  async function submit() {
+    const opened = context.waitForEvent("page")
+    await source.getByRole("button", { name: "지원창 열기", exact: true }).click()
+    const popup = await opened
+    await expect.poll(async () => (await rpc<Snapshot>(ui, { type: "snapshot" })).submissionAttempts?.find(attempt => attempt.tabId !== undefined && attempt.stage === "started")?.context?.sourceJobId).toBe(publicId)
+    await popup.getByRole("button", { name: "지원하기", exact: true }).click()
+    await expect(popup).toHaveURL(/OnPassApply$/)
+    await expect.poll(async () => (await rpc<Snapshot>(ui, { type: "snapshot" })).submissionAttempts?.every(attempt => attempt.stage === "unverified")).toBe(true)
+    return popup
+  }
+  const first = await submit()
+  const firstId = (await rpc<Snapshot>(ui, { type: "snapshot" })).submissionAttempts![0]!.id
+  await first.close()
+  await expect.poll(async () => !!(await rpc<Snapshot>(ui, { type: "snapshot" })).submissionAttempts?.find(attempt => attempt.id === firstId)?.closedAt).toBe(true)
+  await submit()
+  await source.locator("#result").evaluate(element => { element.innerHTML = '<a role="button" data-applymode="ONLINE" data-activity="APPLY_COMPLETE">추가지원</a>' })
+  await expect.poll(async () => (await rpc<Snapshot>(ui, { type: "snapshot" })).submissionAttempts?.find(attempt => attempt.id !== firstId)?.stage).toBe("confirmed")
+  const snapshot = await rpc<Snapshot>(ui, { type: "snapshot" })
+  expect(snapshot.submissionAttempts?.find(attempt => attempt.id === firstId)).toMatchObject({ stage: "unverified", reason: "navigation" })
+  expect(snapshot.records.filter(record => record.status === "applied")).toHaveLength(1)
+  await ui.getByRole("button", { name: "지원 기록 관리", exact: true }).click()
+  await expect(ui.getByRole("region", { name: "지원 진행 상태", exact: true })).toHaveCount(0)
+})
+
+for (const mode of ["popup", "iframe", "search", "reload-pending", "wrong-gno", "no-marker", "initial-result", "heading", "heading-wrong-gno", "hidden-heading", "instruction-heading"] as const) {
 test(`잡코리아 실제 결과 URL OnPassResult: ${mode}`, async ({ ui, context }) => {
   const publicId = "50189229", internalGiNo = "51797123"
   const applicationUrl = `/Recruit/OnPass?giNo=${internalGiNo}&Pass_Match=1&pass_chk=1&logpath=1&sc=630`
   // Only the route and the supplied footer come from the reported real flow.
   // The company, resume/part/pass parameters and server behavior are synthetic.
-  const resultUrl = `/Recruit/OnPass/OnPassResult?gNo=${mode === "wrong-gno" ? "99" : publicId}&R_No=111&PartIdx=222&co_pass_no=333&logpath=1&sc=630`
+  const resultUrl = `/Recruit/OnPass/OnPassResult?gNo=${mode === "wrong-gno" || mode === "heading-wrong-gno" ? "99" : publicId}&R_No=111&PartIdx=222&co_pass_no=333&logpath=1&sc=630`
   let posts = 0, resultVisible = mode !== "reload-pending"
   await context.route("https://www.jobkorea.co.kr/**", route => {
     const pathname = new URL(route.request().url()).pathname
@@ -501,7 +546,8 @@ test(`잡코리아 실제 결과 URL OnPassResult: ${mode}`, async ({ ui, contex
       return route.fulfill({ contentType: "text/html; charset=utf-8", body: `<script>location.replace(${JSON.stringify(resultUrl)})</script>` })
     }
     if (pathname === "/Recruit/OnPass/OnPassResult") {
-      return route.fulfill({ contentType: "text/html; charset=utf-8", body: `<h1>가상 결과 화면</h1>${resultVisible && mode !== "no-marker" ? jobkoreaCompletionButton : "<p>결과 표시 대기</p>"}` })
+      const heading = mode === "hidden-heading" ? '<h1 hidden>입사지원이 완료되었습니다.</h1><h2>가상 오류 화면</h2>' : mode === "instruction-heading" ? '<h1>입사지원 완료 후 확인해 주세요</h1>' : '<h1>입사지원이 완료되었습니다.</h1>'
+      return route.fulfill({ contentType: "text/html; charset=utf-8", body: mode.includes("heading") ? heading : `<h1>가상 결과 화면</h1>${resultVisible && mode !== "no-marker" ? jobkoreaCompletionButton : "<p>결과 표시 대기</p>"}` })
     }
     if (pathname === "/Recruit/OnPass") return route.fulfill({ contentType: "text/html; charset=utf-8", body: jobkoreaSubmissionPage })
     const launch = mode === "iframe"
@@ -536,7 +582,7 @@ test(`잡코리아 실제 결과 URL OnPassResult: ${mode}`, async ({ ui, contex
     resultVisible = true
     await popup!.reload()
   }
-  if (mode === "wrong-gno" || mode === "no-marker") {
+  if (["wrong-gno", "no-marker", "heading-wrong-gno", "hidden-heading", "instruction-heading"].includes(mode)) {
     await expect.poll(async () => (await rpc<Snapshot>(ui, { type: "snapshot" })).records[0]?.submissionStage).toBe("unverified")
     await source.waitForTimeout(1200)
     expect((await rpc<Snapshot>(ui, { type: "snapshot" })).records[0]?.status).toBe("pending_confirmation")
@@ -555,7 +601,7 @@ test(`잡코리아 실제 결과 URL OnPassResult: ${mode}`, async ({ ui, contex
 })
 }
 
-for (const mode of ["popup-transition", "popup-replaced", "iframe-transition", "source-card", "preexisting", "cancelled", "wrong-card"] as const) {
+for (const mode of ["popup-transition", "popup-replaced", "iframe-transition", "source-card", "preexisting", "cancelled", "wrong-card", "popup-input", "popup-link", "popup-hidden-transition"] as const) {
 test(`잡코리아 검색에서 즉시 지원: ${mode}`, async ({ ui, context }) => {
   const sourceId = "50151449", internalId = "51759411"
   const url = "/Recruit/OnPass?giNo=51759411&Pass_Match=1&pass_chk=1&logpath=1&sc=630"
@@ -563,8 +609,8 @@ test(`잡코리아 검색에서 즉시 지원: ${mode}`, async ({ ui, context })
   const iframe = mode === "iframe-transition"
   await context.route("https://www.jobkorea.co.kr/**", route => {
     if (new URL(route.request().url()).pathname === "/Recruit/OnPass") {
-      const action = mode === "popup-replaced" ? "b.outerHTML='<button class=changed-footer disabled>추가지원</button>'" : /transition/.test(mode) ? "b.textContent='추가지원';b.disabled=true" : "b.dataset.clicked='true'"
-      const oldMarker = mode === "preexisting" ? jobkoreaCompletionButton : ""
+      const action = mode === "popup-input" ? "b.outerHTML='<input type=button value=추가지원 disabled>'" : mode === "popup-link" ? "b.outerHTML='<a role=button>추가지원</a>'" : mode === "popup-hidden-transition" ? "b.hidden=true;document.querySelector('#hidden-result').hidden=false" : mode === "popup-replaced" ? "b.outerHTML='<button class=changed-footer disabled>추가지원</button>'" : /transition/.test(mode) ? "b.textContent='추가지원';b.disabled=true" : "b.dataset.clicked='true'"
+      const oldMarker = mode === "preexisting" ? jobkoreaCompletionButton : mode === "popup-hidden-transition" ? '<div id="hidden-result" hidden><input type="button" value="추가지원"></div>' : ""
       return route.fulfill({ contentType: "text/html; charset=utf-8", body: `${oldMarker}<button id="final" class="current-layout"><span>지원하기</span></button><script>document.querySelector('#final').onclick=()=>{const b=document.querySelector('#final');${action}}</script>` })
     }
     const open = iframe ? `const f=document.createElement('iframe');f.title='실제 구조 지원 모달';f.src='${url}';document.body.append(f)` : `window.open('${url}','_blank','noopener')`
@@ -1265,6 +1311,52 @@ test("직접 추가: 이전 백그라운드의 메타데이터 거절은 재시�
   expect(snapshot.records).toHaveLength(1)
   expect(snapshot.records[0]).toMatchObject({ companyName: "업데이트 후 확인 기업", submissionAttemptId: attemptId, submissionStage: "confirmed" })
   expect(snapshot.submissionAttempts?.find(attempt => attempt.id === attemptId)).toMatchObject({ stage: "confirmed", reason: "manual" })
+})
+
+test("지원 진행 상태: 같은 공고의 안내를 묶고 한 번 확인하거나 닫으면 함께 정리", async ({ ui }) => {
+  const ids = Array.from({ length: 5 }, () => crypto.randomUUID())
+  const pending = record({ platform: "jobkorea", sourceJobId: "100", internalGiNo: "9000", sourceApplicationId: undefined, companyName: "가상 중복 기업", jobTitle: "디자이너", jobUrl: "https://www.jobkorea.co.kr/Recruit/GI_Read/100", appliedAt: undefined, status: "pending_confirmation", submissionStage: "unverified", submissionAttemptId: ids[0], evidence: "submission_attempt", collectedAt: "2026-10-29T01:00:00Z" })
+  await rpc(ui, { type: "restore", backup: { format: "todaystart", version: 1, exportedAt: new Date().toISOString(), records: [pending] } })
+  await ui.evaluate(async ids => {
+    const context = { sourceJobId: "100", internalGiNo: "9000", companyName: "가상 중복 기업", jobTitle: "디자이너", jobUrl: "https://www.jobkorea.co.kr/Recruit/GI_Read/100" }
+    const common = { platform: "jobkorea", sourceJobId: "9000", frameId: 0, startedAt: "2026-10-29T01:00:00Z", updatedAt: "2026-10-29T01:01:00Z" }
+    await chrome.storage.local.set({ submissionAttempts: [
+      { ...common, id: ids[0], tabId: 999991, context, stage: "unverified", reason: "navigation", requestId: crypto.randomUUID() },
+      { ...common, id: ids[1], tabId: 999992, context, stage: "started", reason: "opened" },
+      { ...common, id: ids[2], tabId: 999993, stage: "unverified", reason: "closed" },
+      { ...common, id: ids[3], tabId: 999994, context, stage: "unverified", reason: "timeout" },
+      { ...common, id: ids[4], tabId: 999995, platform: "saramin", sourceJobId: "200", stage: "unverified", reason: "timeout", context: { sourceJobId: "200", companyName: "가상 중복 기업", jobTitle: "디자이너", jobUrl: "https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=200" } }
+    ] })
+  }, ids)
+  await ui.getByRole("button", { name: "지원 기록 관리", exact: true }).click()
+  const activity = ui.getByRole("region", { name: "지원 진행 상태", exact: true })
+  const jobkorea = activity.locator(".submission-item").filter({ hasText: "잡코리아" })
+  await expect(activity.locator(".submission-item")).toHaveCount(2)
+  await expect(jobkorea).toContainText("같은 공고 안내 4건")
+  await expect(jobkorea.getByRole("button", { name: "완료 여부 확인", exact: true })).toHaveCount(1)
+  await expect(jobkorea.getByRole("button", { name: "직접 추가", exact: true })).toHaveCount(0)
+  await ui.screenshot({ path: "test-results/submission-grouped.png", fullPage: true })
+  await jobkorea.getByRole("button", { name: "잡코리아 가상 중복 기업 진행 안내 닫기", exact: true }).click()
+  await expect(jobkorea).toHaveCount(0)
+  const dismissed = await ui.evaluate(() => chrome.storage.local.get("dismissedSubmissionAttempts"))
+  expect(dismissed.dismissedSubmissionAttempts).toEqual(expect.arrayContaining(ids.slice(0, 4)))
+  expect(dismissed.dismissedSubmissionAttempts).not.toContain(ids[4])
+  await ui.reload()
+  await expect(activity.locator(".submission-item")).toHaveCount(1)
+  await expect(activity).toContainText("사람인")
+  await ui.evaluate(() => chrome.storage.local.set({ dismissedSubmissionAttempts: [] }))
+  await ui.reload()
+  await expect(activity.locator(".submission-item")).toHaveCount(2)
+  await jobkorea.getByRole("button", { name: "완료 여부 확인", exact: true }).click()
+  const dialog = ui.getByRole("dialog", { name: "지원 기록 수정", exact: true })
+  await dialog.getByLabel("상태", { exact: true }).selectOption("applied")
+  await dialog.getByRole("button", { name: "변경 저장", exact: true }).click()
+  await expect(jobkorea).toHaveCount(0)
+  await expect(activity.locator(".submission-item")).toHaveCount(1)
+  await ui.reload()
+  await expect(activity.locator(".submission-item")).toHaveCount(1)
+  await expect(activity).toContainText("사람인")
+  expect((await rpc<Snapshot>(ui, { type: "snapshot" })).records).toHaveLength(1)
 })
 
 test("지원 진행 상태: 확인 필요에서 직접 추가할 때 정보를 채우고 원래 항목과 연결", async ({ ui }) => {
@@ -3455,6 +3547,50 @@ test("페이지 이동·기간 범위를 진단하고 다음 페이지 파싱 �
   snapshot = await rpc<Snapshot>(ui, { type: "snapshot" })
   expect(snapshot.reports.saramin).toMatchObject({ code: "dom_changed", collected: 0, scope: "2026.09.01 ~ 2026.09.30 · 2페이지" })
   expect(snapshot.records).toHaveLength(3)
+})
+
+test("잡코리아 상세 지원 이력: 저장 직후 중복 헤더·복제 안내·헤더 교체에도 한 번만 표시", async ({ ui, context }) => {
+  const url = "https://www.jobkorea.co.kr/Recruit/GI_Read/50194254"
+  const header = '<div><div><section data-sentry-component="CompanyName"><h2>가상 안내 기업</h2></section><section data-sentry-component="TitleContent"><h1>웹 개발자</h1></section></div></div>'
+  await context.route(url, route => route.fulfill({ contentType: "text/html; charset=utf-8", body: `<main><header data-sentry-component="Title">${header}${header}</header></main>` }))
+  const page = await context.newPage()
+  await page.goto(url)
+  await pageMessage(ui, url, "GET_PAGE")
+  await expect(page.locator("todaystart-warning")).toHaveCount(0)
+  await rpc(ui, { type: "restore", backup: { format: "todaystart", version: 1, exportedAt: new Date().toISOString(), records: [record({ platform: "jobkorea", companyName: "가상 안내 기업", jobTitle: "웹 개발자", sourceJobId: "50194254", sourceApplicationId: "7001", jobUrl: url, appliedAt: "2026-10-29" })] } })
+  const warning = page.locator("todaystart-warning")
+  await expect(warning).toHaveCount(1)
+  await expect(warning.locator("article")).toHaveCount(1)
+  const state = await pageMessage<PageState>(ui, url, "GET_PAGE")
+  expect(state.ok && state.data.matches).toBe(1)
+  await warning.evaluate(host => {
+    host.setAttribute("data-reuse-probe", "original")
+    const duplicate = document.createElement("todaystart-warning")
+    duplicate.setAttribute("data-todaystart", "warning")
+    duplicate.attachShadow({ mode: "open" }).innerHTML = host.shadowRoot!.innerHTML
+    host.after(duplicate)
+  })
+  await expect(warning).toHaveCount(1)
+  await expect(warning).toHaveAttribute("data-reuse-probe", "original")
+  await page.locator('[data-sentry-component="TitleContent"]').first().evaluate(header => header.replaceWith(header.cloneNode(true)))
+  await expect(warning).toHaveCount(1)
+  await expect(warning).toHaveAttribute("data-reuse-probe", "original")
+  await pageMessage(ui, url, "GET_PAGE")
+  const snapshot = await rpc<Snapshot>(ui, { type: "snapshot" }), saved = snapshot.records[0]!
+  await rpc(ui, { type: "edit", id: saved.id, changes: { companyName: saved.companyName, jobTitle: "수정한 지원 직무", appliedAt: saved.appliedAt, status: "applied" } })
+  await expect(warning).toHaveCount(1)
+  await expect(warning).toContainText("지원 직무: 수정한 지원 직무")
+  await warning.locator("summary").click()
+  await expect(warning.locator("details")).not.toHaveAttribute("open", "")
+  await rpc(ui, { type: "settings", settings: { ...snapshot.settings, theme: "dark" } })
+  await expect(warning).toHaveAttribute("data-theme", "dark")
+  await expect(warning.locator("details")).not.toHaveAttribute("open", "")
+  await page.locator('[data-sentry-component="Title"] > div').first().evaluate(header => { (header as HTMLElement).style.opacity = "0" })
+  await expect(page.locator('[data-sentry-component="Title"] > div').nth(1).locator("todaystart-warning")).toHaveCount(1)
+  await expect(warning).toBeVisible()
+  await expect(warning).toHaveCount(1)
+  await expect(warning).toContainText("지원 직무: 수정한 지원 직무")
+  await page.screenshot({ path: "test-results/jobkorea-detail-single-warning.png", fullPage: true })
 })
 
 test("지연 렌더링과 컨테이너 교체 후에도 경고가 한 번만 표시", async ({ ui, context }) => {

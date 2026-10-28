@@ -3,7 +3,7 @@ import { applicationPage, bridgeEventName, saraminCompletion, SubmissionEventSch
 import { DomPlatformAdapter } from "../platforms/adapter"
 import { platformForUrl, jobIdFromUrl } from "../core/urls"
 import { rpc } from "../messaging/protocol"
-import { hasJobkoreaCompletion, hasJobkoreaCompletionTransition } from "../submission/completion-marker"
+import { hasJobkoreaCompletion, hasJobkoreaCompletionTransition, hasJobkoreaResultHeading, jobkoreaAdditionalControls } from "../submission/completion-marker"
 import { isJobkoreaApplyClick } from "../submission/jobkorea-apply"
 import { publicPostingProfileFor } from "../platforms/public-postings"
 
@@ -62,6 +62,7 @@ let pendingLinkedGiNo: string | undefined
 let pendingPostingId: string | undefined
 let clickedAt = 0
 let finalClickObserved = false
+let completionGeneration = 0
 let completionBeforeClick = new Set<Element>()
 const linkedFrames = new WeakMap<HTMLIFrameElement, string>()
 let linkedPosting: { sourceJobId: string; internalGiNo: string } | undefined
@@ -97,7 +98,8 @@ document.addEventListener("click", event => {
   if (!event.isTrusted || platform !== "jobkorea" || !(event.target instanceof Element)) return
   if (application) {
     if (!application.result && application.jobId && isJobkoreaApplyClick(event.target)) {
-      completionBeforeClick = new Set([...document.querySelectorAll("button")].filter(button => button.textContent?.replace(/\s+/g, "") === "추가지원"))
+      completionBeforeClick = new Set(jobkoreaAdditionalControls(document))
+      completionGeneration++
       finalClickObserved = true
       context()
       send({ kind: "apply_clicked", platform: "jobkorea", sourceJobId: application.jobId })
@@ -133,12 +135,12 @@ function checkCompletion() {
   }
   const completed = application?.platform === "jobkorea" && !application.result && finalClickObserved
     ? hasJobkoreaCompletionTransition(document, completionBeforeClick)
-    : hasJobkoreaCompletion(document)
+    : hasJobkoreaCompletion(document) || !!(application?.platform === "jobkorea" && application.result && application.postingId && hasJobkoreaResultHeading(document))
   const event = platform === "jobkorea" && completionPage && completed
     ? { kind: "completion_marker" as const, platform: "jobkorea" as const }
     : application?.platform === "saramin" && application.result ? saraminCompletion(location.href, document.body?.innerText) : undefined
   if (!event) return
-  sendCompletion(event, "document")
+  sendCompletion(event, `document:${completionGeneration}`)
 }
 function sendCompletion(event: SubmissionEvent, key: string) {
   if (completionSent.has(key) || completionPending.has(key)) return

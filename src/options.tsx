@@ -150,6 +150,10 @@ function Options() {
     setSort(current => ({ key, direction: current.key === key ? current.direction === "ascending" ? "descending" : "ascending" : key === "appliedAt" ? "descending" : "ascending" }))
   }
   function editRecord(record: ApplicationRecord, review = false, status = false) { setEditing(record); setEditingReview(review); setEditingStatus(status) }
+  function confirmSubmission(record: ApplicationRecord) {
+    const appliedAt = record.appliedAt || new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10)
+    editRecord({ ...record, appliedAt }, requiresStatusReview(record), true)
+  }
   async function saveEditing(next = false) {
     if (!editing) return
     const current = editing, following = next ? reviewRecords.find(record => record.id !== current.id) : undefined
@@ -219,7 +223,7 @@ function Options() {
         <DashboardAnalytics records={snapshot?.records} source={activeDashboardSource} onSource={setDashboardSource} />
       </> : view === "calendar" ? <CareerCalendar key={snapshot?.dataGeneration || "initial"} planner={planner} records={records} onNew={(date, kind) => openEvent(undefined, date, undefined, undefined, kind)} onOpen={event => openEvent(event)} onRecord={setDetail} onChange={changeCalendarEvent} onManageKinds={() => setManagingKinds(true)} /> : view === "notes" ? <NotesPage key={snapshot?.dataGeneration || "initial"} generation={snapshot?.dataGeneration} planner={planner} records={records} onOpen={(note, menu) => openNote(note, undefined, undefined, menu)} onNew={() => openNote()} editingId={noteEditor?.activeId || noteEditor?.initial.id} renderEditor={noteEditor ? controls => (<NoteEditor key={noteEditor.initial.id} initial={noteEditor.initial} recovered={noteEditor.recovered} records={records} links={planner.links} generation={snapshot?.dataGeneration} {...controls} menuInitiallyOpen={noteEditor.initialMenu} onIdentityChange={initial => setNoteEditor(current => current && { ...current, initial, recovered: undefined, activeId: initial.id, initialMenu: false })} onNew={() => openNote()} onClose={(_reason, message) => { const id = noteEditor.initial.id; setNoteEditor(current => current?.initial.id === id ? undefined : current); if (message) setNotice(message) }} />) : undefined} /> : <>
         <div ref={reviewPanel}>{reviewOnly && <RecordReviewPanel records={reviewRecords} settings={settings} run={snapshot?.historyRun} onShowAll={() => setReviewOnly(false)} />}</div>
-        <SubmissionActivity attempts={snapshot?.submissionAttempts} records={records} onEdit={record => editRecord(record, requiresStatusReview(record), true)} onAdd={attempt => { setManualInitial(manualApplicationPrefill(attempt)); setAdding(true) }} />
+        <SubmissionActivity attempts={snapshot?.submissionAttempts} records={records} onEdit={confirmSubmission} onAdd={attempt => { setManualInitial(manualApplicationPrefill(attempt)); setAdding(true) }} />
 
         {!reviewOnly && <RecordImports ready={!!snapshot} records={records} consent={settings?.consent} reports={snapshot?.reports} completions={snapshot?.historyCompletions} run={snapshot?.historyRun} />}
 

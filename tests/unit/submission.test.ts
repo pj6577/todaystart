@@ -307,6 +307,62 @@ const launch = { kind: "popup_link" as const, platform: "jobkorea" as const, sou
 const popupEntered = { kind: "entered" as const, platform: "jobkorea" as const, sourceJobId: handoffGiNo }
 const popupSubmit = { kind: "submitting" as const, platform: "jobkorea" as const, sourceJobId: handoffGiNo, requestId }
 
+it("닫힌 이전 제출창이 남아 있어도 같은 공고의 현재 제출을 완료 표시와 연결한다", async () => {
+  await tracker.observe({ kind: "context", platform: "jobkorea", context: handoffPosting }, handoffDetail())
+  await tracker.observe({ ...launch, launchId: crypto.randomUUID() }, handoffDetail())
+  await tracker.observe(popupSubmit, handoffPopup(9))
+  await tracker.observe({ kind: "landed", platform: "jobkorea" }, { ...handoffPopup(9), url: "https://www.jobkorea.co.kr/Recruit/OnPass/OnPassApply", documentId: "old-result" })
+  await tracker.closeTab(9)
+  await tracker.observe({ ...launch, launchId: crypto.randomUUID() }, handoffDetail())
+  await tracker.observe({ ...popupSubmit, requestId: crypto.randomUUID() }, handoffPopup(10))
+  expect(await tracker.observe({ kind: "completion_marker", platform: "jobkorea" }, handoffDetail())).toBe(true)
+  const attempts = await tracker.snapshot()
+  expect(attempts.find(attempt => attempt.tabId === 10)?.stage).toBe("confirmed")
+  expect(attempts.find(attempt => attempt.tabId === 9)?.stage).toBe("unverified")
+  expect(attempts.find(attempt => attempt.tabId === 9)?.reason).toBe("navigation")
+  expect(attempts.find(attempt => attempt.tabId === 9)?.closedAt).toBeDefined()
+})
+
+it("여러 창이 여전히 제출 중이면 원래 공고의 완료 표시를 임의 배정하지 않고 원인을 남긴다", async () => {
+  await tracker.observe({ kind: "context", platform: "jobkorea", context: handoffPosting }, handoffDetail())
+  await tracker.observe({ ...launch, launchId: crypto.randomUUID() }, handoffDetail())
+  await tracker.observe(popupSubmit, handoffPopup(9))
+  await tracker.observe({ ...launch, launchId: crypto.randomUUID() }, handoffDetail())
+  await tracker.observe({ ...popupSubmit, requestId: crypto.randomUUID() }, handoffPopup(10))
+  expect(await tracker.observe({ kind: "completion_marker", platform: "jobkorea" }, handoffDetail())).toBe(false)
+  expect((await tracker.snapshot()).every(attempt => attempt.stage !== "confirmed" && attempt.completionIssue === "ambiguous_attempts")).toBe(true)
+  expect(await tracker.observe({ kind: "completion_marker", platform: "jobkorea" }, handoffPopup(10))).toBe(true)
+  expect((await tracker.snapshot()).find(attempt => attempt.tabId === 10)?.completionIssue).toBeUndefined()
+})
+
+it("같은 결과창의 오래된 시도보다 방금 제출해서 열린 결과 문서 연결을 우선한다", async () => {
+  const popup = await jobkoreaMetadata()
+  await tracker.observe({ kind: "submitting", platform: "jobkorea", sourceJobId: "51797123", requestId }, popup)
+  const current = (await tracker.snapshot())[0]!
+  stored.submissionAttempts = [{ ...current, id: crypto.randomUUID(), sourceJobId: "51797000", context: { ...current.context!, internalGiNo: "51797000" }, stage: "unverified", reason: "navigation" }, current]
+  const result = { ...popup, url: "https://www.jobkorea.co.kr/Recruit/OnPass/OnPassResult?gNo=50194254", documentId: "new-result-document" }
+  await tracker.observe({ kind: "landed", platform: "jobkorea" }, result)
+  expect(await tracker.observe({ kind: "completion_marker", platform: "jobkorea" }, result)).toBe(true)
+  const attempts = await tracker.snapshot()
+  expect(attempts.find(attempt => attempt.id === current.id)?.stage).toBe("confirmed")
+  expect(attempts.find(attempt => attempt.id !== current.id)?.stage).toBe("unverified")
+})
+
+it("완료 공고 정보 누락과 다른 공고의 결과를 구분해 기록하고 확인된 결과에서 원인을 해제한다", async () => {
+  const popup = await jobkoreaMetadata()
+  await tracker.observe({ kind: "submitting", platform: "jobkorea", sourceJobId: "51797123", requestId }, popup)
+  const result = { ...popup, url: "https://www.jobkorea.co.kr/Recruit/OnPass/OnPassResult?gNo=99", documentId: "result" }
+  expect(await tracker.observe({ kind: "completion_marker", platform: "jobkorea" }, result)).toBe(false)
+  expect((await tracker.snapshot())[0]?.completionIssue).toBe("posting_mismatch")
+  const known = (await tracker.snapshot())[0]!
+  stored.submissionAttempts = [{ ...known, context: undefined }]
+  expect(await tracker.observe({ kind: "completion_marker", platform: "jobkorea" }, { ...result, url: result.url.replace("gNo=99", "gNo=50194254") })).toBe(false)
+  expect((await tracker.snapshot())[0]?.completionIssue).toBe("missing_context")
+  stored.submissionAttempts = [known]
+  expect(await tracker.observe({ kind: "completion_marker", platform: "jobkorea" }, popup)).toBe(true)
+  expect((await tracker.snapshot())[0]?.completionIssue).toBeUndefined()
+})
+
 it.each([0, 4])("검색 카드에서 바로 연 지원창의 공개 ID·giNo와 완료를 연결한다: frame %s", async frameId => {
   const listing = { ...handoffDetail(), url: "https://www.jobkorea.co.kr/Search?stext=react&Page_No=5" }
   const popup = frameId === 0 ? handoffPopup() : { ...handoffPopup(1), frameId }

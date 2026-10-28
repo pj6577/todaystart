@@ -32,6 +32,9 @@ export const SubmissionAttemptSchema = z.object({
   stage: z.enum(["started", "submitting", "confirmed", "unverified"]),
   requestId: z.string().uuid().optional(), sourceApplicationId: NumericIdSchema.optional(),
   clickedAt: z.string().datetime().optional(),
+  closedAt: z.string().datetime().optional(),
+  resultDocumentId: z.string().optional(),
+  completionIssue: z.enum(["ambiguous_attempts", "missing_context", "posting_mismatch"]).optional(),
   confirmationMethod: z.enum(["api_response", "completion_page", "completion_marker", "history_page"]).optional(),
   startedAt: z.string().datetime(), updatedAt: z.string().datetime(),
   reason: z.enum(["opened", "waiting", "success", "result_unknown", "navigation", "closed", "timeout", "manual"]).default("opened")
