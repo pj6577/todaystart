@@ -61,9 +61,12 @@ export class SubmissionTracker {
   }
   async closeTab(tabId: number) {
     const { attempts } = await this.store.read()
-    for (const attempt of attempts) if (attempt.tabId === tabId && (attempt.stage === "started" || attempt.stage === "submitting")) {
-      attempt.stage = "unverified"; attempt.reason = "closed"; attempt.updatedAt = new Date().toISOString()
-      await this.materialize(attempt)
+    for (const attempt of attempts) if (attempt.tabId === tabId && !attempt.closedAt) {
+      attempt.closedAt = new Date().toISOString()
+      if (attempt.stage === "started" || attempt.stage === "submitting") {
+        attempt.stage = "unverified"; attempt.reason = "closed"; attempt.updatedAt = attempt.closedAt
+        await this.materialize(attempt)
+      }
     }
     await this.store.save(attempts)
   }
@@ -91,6 +94,7 @@ export class SubmissionTracker {
         await chrome.storage.local.set({ revision: crypto.randomUUID() })
       }
       attempt.stage = "confirmed"; attempt.reason = record.evidence === "manual" ? "manual" : "success"; attempt.updatedAt = new Date().toISOString()
+      delete attempt.completionIssue
       if (record.evidence === "history_page") attempt.confirmationMethod = "history_page"
       changed = true
     }

@@ -11,11 +11,13 @@ async function observeAttempt(event: AttemptEvent, { tabId, frameId, page, sende
   const now = new Date().toISOString()
   if (event.kind === "landed") {
     if (event.platform !== "jobkorea") throw new Error("지원 결과 이동을 확인해 주세요.")
-    for (const attempt of attempts) {
-      if (attempt.platform === "jobkorea" && attempt.tabId === tabId && attempt.frameId === frameId && attempt.documentId !== sender.documentId && attempt.stage === "submitting") {
-        attempt.stage = "unverified"; attempt.reason = "navigation"; attempt.updatedAt = now
-        await services.materialize(attempt)
-      }
+    const pending = attempts.filter(attempt => attempt.platform === "jobkorea" && attempt.tabId === tabId && attempt.frameId === frameId && attempt.documentId !== sender.documentId && attempt.stage === "submitting")
+    for (const attempt of pending) {
+      // Bind the browser's new result document to its unique in-flight request.
+      // The result still needs a visible completion marker before it can succeed.
+      if (pending.length === 1 && page?.platform === "jobkorea" && page.result && sender.documentId && (!page.jobId || page.jobId === attempt.sourceJobId) && (!page.postingId || page.postingId === attempt.context?.sourceJobId)) attempt.resultDocumentId = sender.documentId
+      attempt.stage = "unverified"; attempt.reason = "navigation"; attempt.updatedAt = now
+      await services.materialize(attempt)
     }
   } else if (event.kind === "result") {
     // A success response must belong to this document/frame's exact observed
@@ -39,11 +41,13 @@ async function observeAttempt(event: AttemptEvent, { tabId, frameId, page, sende
     await services.attachContexts(state)
     attempt.documentId = sender.documentId
     if (event.kind === "apply_clicked") {
+      delete attempt.closedAt; delete attempt.resultDocumentId; delete attempt.completionIssue
       attempt.clickedAt = now
       attempt.stage = "submitting"; attempt.reason = "waiting"; attempt.updatedAt = now
     }
     if (event.kind === "submitting") {
       if (attempt.requestId === event.requestId) { await services.store.save(attempts); return true }
+      delete attempt.closedAt; delete attempt.resultDocumentId; delete attempt.completionIssue
       attempt.stage = "submitting"; attempt.reason = "waiting"; attempt.requestId = event.requestId; attempt.updatedAt = now
       await services.materialize(attempt)
     }
