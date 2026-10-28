@@ -1170,6 +1170,44 @@ test("대시보드 사이트 심벌과 가져오기 버튼: 직접 수집 시작
   await expect(ui).toHaveURL(initialUrl)
 })
 
+test("직접 추가: 이전 백그라운드의 메타데이터 거절은 재시작 안내와 입력 유지 후 안전하게 재시도", async ({ ui }) => {
+  const attemptId = crypto.randomUUID(), generation = crypto.randomUUID()
+  await ui.evaluate(async ({ attemptId, generation }) => chrome.storage.local.set({ dataGeneration: generation, submissionAttempts: [
+    { id: attemptId, platform: "wanted", tabId: 999991, frameId: 0, sourceJobId: "6500", stage: "unverified", reason: "timeout", context: { sourceJobId: "6500", companyName: "업데이트 후 확인 기업", jobTitle: "웹 개발자", jobUrl: "https://www.wanted.co.kr/wd/6500" }, startedAt: "2026-10-28T01:00:00Z", updatedAt: "2026-10-28T01:00:00Z" }
+  ] }), { attemptId, generation })
+  await ui.getByRole("button", { name: "지원 기록 관리", exact: true }).click()
+  await ui.getByRole("region", { name: "지원 진행 상태", exact: true }).getByRole("button", { name: "직접 추가", exact: true }).click()
+  const dialog = ui.getByRole("dialog", { name: "지원 기록 직접 추가", exact: true })
+  await expect(dialog.getByLabel("기업명", { exact: true })).toHaveValue("업데이트 후 확인 기업")
+  await ui.evaluate(() => {
+    const original = chrome.runtime.sendMessage.bind(chrome.runtime)
+    const state = window as unknown as { manualRequests: unknown[]; restoreManualTransport: () => void }
+    state.manualRequests = []
+    state.restoreManualTransport = () => { chrome.runtime.sendMessage = original }
+    chrome.runtime.sendMessage = ((request: Request) => {
+      if (request.type !== "manual_create") return original(request)
+      state.manualRequests.push(request)
+      return Promise.resolve({ ok: false, error: JSON.stringify([{ code: "unrecognized_keys", keys: ["submissionAttemptId", "dataGeneration"], path: [], message: "Unrecognized key(s) in object: 'submissionAttemptId', 'dataGeneration'" }]) })
+    }) as typeof chrome.runtime.sendMessage
+  })
+  await dialog.getByRole("button", { name: "기록 추가", exact: true }).click()
+  await expect(dialog.getByRole("alert")).toContainText("chrome://extensions")
+  await expect(dialog.getByRole("alert")).not.toContainText("unrecognized_keys")
+  await expect(dialog.getByLabel("기업명", { exact: true })).toHaveValue("업데이트 후 확인 기업")
+  await expect(dialog.getByLabel("지원 직무", { exact: true })).toHaveValue("웹 개발자")
+  const requests = await ui.evaluate(() => (window as unknown as { manualRequests: unknown[] }).manualRequests)
+  expect(requests).toHaveLength(1)
+  expect(requests[0]).toMatchObject({ type: "manual_create", submissionAttemptId: attemptId, dataGeneration: generation })
+  expect((await rpc<Snapshot>(ui, { type: "snapshot" })).records).toHaveLength(0)
+  await ui.evaluate(() => (window as unknown as { restoreManualTransport: () => void }).restoreManualTransport())
+  await dialog.getByRole("button", { name: "기록 추가", exact: true }).click()
+  await expect(dialog).toHaveCount(0)
+  const snapshot = await rpc<Snapshot>(ui, { type: "snapshot" })
+  expect(snapshot.records).toHaveLength(1)
+  expect(snapshot.records[0]).toMatchObject({ companyName: "업데이트 후 확인 기업", submissionAttemptId: attemptId, submissionStage: "confirmed" })
+  expect(snapshot.submissionAttempts?.find(attempt => attempt.id === attemptId)).toMatchObject({ stage: "confirmed", reason: "manual" })
+})
+
 test("지원 진행 상태: 확인 필요에서 직접 추가할 때 정보를 채우고 원래 항목과 연결", async ({ ui }) => {
   const id = crypto.randomUUID(), unknownId = crypto.randomUUID()
   await ui.evaluate(async ({ id, unknownId }) => chrome.storage.local.set({ submissionAttempts: [

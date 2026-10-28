@@ -37,10 +37,25 @@ export const RequestSchema = z.discriminatedUnion("type", [
 export type Request = z.infer<typeof RequestSchema>
 export type Envelope<T> = { ok: true; data: T } | { ok: false; error: string }
 
+function isLegacyBackgroundIssue(issue: unknown): boolean {
+  if (!issue || typeof issue !== "object") return false
+  const { code, path, keys } = issue as Record<string, unknown>
+  if (!Array.isArray(path)) return false
+  if (code === "invalid_union_discriminator") return path.length === 1 && path[0] === "type"
+  if (code !== "unrecognized_keys" || !Array.isArray(keys)) return false
+  if (path.length === 0) {
+    return keys.length > 0 && keys.every(key => key === "submissionAttemptId" || key === "dataGeneration")
+  }
+  return path.length === 1 && (
+    path[0] === "note" && keys.some(key => key === "mentions" || key === "color") ||
+    path[0] === "event" && keys.includes("preparation")
+  )
+}
+
 export function requestErrorMessage(message: string): string {
   try {
     const issues: unknown = JSON.parse(message)
-    if (Array.isArray(issues) && issues.some(issue => issue?.code === "invalid_union_discriminator" && Array.isArray(issue.path) && issue.path.length === 1 && issue.path[0] === "type" || issue?.code === "unrecognized_keys" && issue.path?.length === 1 && (issue.path[0] === "note" && issue.keys?.some((key: string) => key === "mentions" || key === "color") || issue.path[0] === "event" && issue.keys?.includes("preparation")))) {
+    if (Array.isArray(issues) && issues.some(isLegacyBackgroundIssue)) {
       return "이전 버전의 백그라운드가 실행 중이에요. chrome://extensions에서 오늘시작의 새로고침 버튼을 누른 뒤 이 화면도 새로고침해 주세요."
     }
   } catch { /* Normal application errors already contain a readable message. */ }
