@@ -1,0 +1,23 @@
+{
+  "file": "release/todaystart-0.10.0.zip",
+  "version": "0.10.0",
+  "baseCommit": "152a6892b1ce1e171533434fc0ffe7d43607607a",
+  "bytes": 2732100,
+  "files": 45,
+  "sha256": "5299c83907c0be79f5ab0975c5493e073cdfaabb9a44d4adccce8d8e89cffc05",
+  "permissionsUnchanged": true,
+  "archiveIntegrity": "passed",
+  "buildBytesMatch": true,
+  "manifestResourcesPresent": true,
+  "mainWorldObserverRegistered": true,
+  "licensesIncluded": true,
+  "excludedHistoricalAssets": true,
+  "secretPatternMatches": [],
+  "validation": {
+    "typecheck": "passed",
+    "unitTestFiles": 38,
+    "unitTests": 420,
+    "browserTests": 13,
+    "build": "passed"
+  }
+}
