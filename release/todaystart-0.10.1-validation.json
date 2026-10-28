@@ -1,0 +1,23 @@
+{
+  "file": "release/todaystart-0.10.1.zip",
+  "version": "0.10.1",
+  "baseCommit": "33e172d5e152f3b03a465b17d12a73db8c8c922d",
+  "sourceState": "working-tree",
+  "bytes": 2732884,
+  "files": 45,
+  "sha256": "294da3570b5aa087b51fc74249d7596a1b4618a4d2b8a7a173a0ea3c138f2771",
+  "permissionsUnchanged": true,
+  "archiveIntegrity": "passed",
+  "buildBytesMatch": true,
+  "manifestResourcesPresent": true,
+  "mainWorldObserverRegistered": true,
+  "licensesIncluded": true,
+  "excludedHistoricalAssets": true,
+  "secretPatternMatches": [],
+  "validation": {
+    "typecheck": "passed",
+    "browserTests": 2,
+    "browserScope": "Settings desktop/mobile/dark mode; MV3 loading, permissions, dashboard and popup",
+    "build": "passed"
+  }
+}

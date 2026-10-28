@@ -16,6 +16,8 @@ release/*
 !release/todaystart-0.9.3-validation.json
 !release/todaystart-0.10.0.sha256
 !release/todaystart-0.10.0-validation.json
+!release/todaystart-0.10.1.sha256
+!release/todaystart-0.10.1-validation.json
 
 # Only curated documentation and representative screenshots are tracked.
 docs/*
