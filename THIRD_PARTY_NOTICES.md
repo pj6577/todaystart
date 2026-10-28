@@ -27,6 +27,7 @@ Dexie, React, Plasmo, Fuse.js, Zod와 그 밖의 의존성은 각 패키지의 �
 - [리멤버 로고 가이드](https://static.rememberapp.co.kr/brand/brand_guideline_logo.pdf)는 원본 형태와 활용 규정을 설명합니다.
 - Discord 심벌은 [공식 브랜드 안내](https://discord.com/branding)에 따라 커뮤니티 링크를 식별하는 데 사용합니다. 프로젝트 라이선스로 재허락하지 않습니다.
 - 소개 페이지의 컬러 Chrome 아이콘은 [Google 공식 Chrome 페이지](https://www.google.com/chrome/)에서 제공하는 [SVG](https://www.google.com/chrome/static/images/chrome-logo-m100.svg) 원본을 사용합니다. 설치 대상 브라우저를 식별하며, Google의 공식 제휴나 보증을 뜻하지 않습니다. Google의 자산을 프로젝트 라이선스로 재허락하지 않습니다.
+- 상단 GitHub 아이콘은 [GitHub Octicons의 mark-github](https://github.com/primer/octicons/blob/main/icons/mark-github-16.svg)를 사용합니다. [MIT 라이선스 원문](landing/assets/octicons-LICENSE.txt)을 소개 페이지 빌드에도 동봉합니다.
 
 브랜드 가이드는 해당 권리자가 제공하는 사용 지침이며, 이 문서는 모든 제3자 자산에 대한 포괄적 재배포 허가를 확인했다는 선언이 아닙니다. 현재 저장소의 이용 조건과 제3자 권리자의 적용 조건을 함께 따라야 합니다.
 

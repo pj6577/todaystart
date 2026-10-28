@@ -245,7 +245,8 @@ p {
   align-items: center;
   gap: 12px;
 }
-.theme-control {
+.theme-control,
+.header-github {
   position: relative;
   display: flex;
   align-items: center;
@@ -257,6 +258,12 @@ p {
   border-radius: 11px;
   background: var(--surface-inset);
   color: var(--secondary);
+}
+.header-github svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  stroke: none;
 }
 .theme-symbol {
   display: none;
@@ -277,7 +284,8 @@ p {
   opacity: 0;
   cursor: pointer;
 }
-.theme-control:hover {
+.theme-control:hover,
+.header-github:hover {
   background: var(--surface-selected);
   color: var(--ink);
 }
@@ -1181,7 +1189,8 @@ p {
     height: 40px;
     padding: 8px;
   }
-  .theme-control {
+  .theme-control,
+  .header-github {
     width: 40px;
     height: 40px;
   }

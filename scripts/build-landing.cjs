@@ -44,6 +44,7 @@ const files = [
   ["landing/theme.js", "theme.js"],
   ["landing/motion.js", "motion.js"],
   ["landing/assets/chrome.svg", "assets/chrome.svg"],
+  ["landing/assets/octicons-LICENSE.txt", "assets/octicons-LICENSE.txt"],
   ["assets/icon.svg", "assets/icon.svg"],
   ...[
     "saramin",
