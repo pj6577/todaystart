@@ -1,10 +1,13 @@
 import { z } from "zod"
 import { DateSchema } from "./model"
 import type { NoteBoard } from "./note-board"
+import { EventKindSchema, type EventKindConfig } from "./event-kinds"
+export { eventKinds, EventKindSchema } from "./event-kinds"
 
-export const eventKinds = { deadline: "지원 마감", interview: "면접", assessment: "코딩테스트·인적성", assignment: "과제 제출", result: "결과 확인", other: "기타" } as const
 export const eventStatuses = { planned: "예정", completed: "완료", cancelled: "취소" } as const
-export const EventKindSchema = z.enum(["deadline", "interview", "assessment", "assignment", "result", "other"])
+export const preparationStates = { not_started: "준비 전", in_progress: "준비 중", ready: "준비 완료" } as const
+export const PreparationStateSchema = z.enum(["not_started", "in_progress", "ready"])
+export type PreparationState = z.infer<typeof PreparationStateSchema>
 const LinkIdSchema = z.string().uuid()
 export const ApplicationLinkSchema = z.object({ id: LinkIdSchema, recordId: z.string().min(1).max(4096), aliases: z.array(z.string().min(1).max(4096)).max(200) }).strict()
 export type ApplicationLink = z.infer<typeof ApplicationLinkSchema>
@@ -17,7 +20,7 @@ export const NoteFieldsSchema = z.object({ title: z.string().trim().min(1).max(2
 export const NoteSchema = NoteFieldsSchema.extend(versioned).strict()
 export type Note = z.infer<typeof NoteSchema>
 const time = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
-export const EventFieldsSchema = z.object({ title: z.string().trim().min(1).max(200), kind: EventKindSchema, date: DateSchema, time: time.optional(), status: z.enum(["planned", "completed", "cancelled"]), location: z.string().max(1000), url: z.string().url().max(3000).refine(value => { try { const u = new URL(value); return u.protocol === "https:" && !u.username && !u.password } catch { return false } }, "접속 링크는 HTTPS 주소를 입력해 주세요.").optional(), body: z.string().max(10000), checklist: ChecklistSchema }).strict()
+export const EventFieldsSchema = z.object({ title: z.string().trim().min(1).max(200), kind: EventKindSchema, date: DateSchema, time: time.optional(), status: z.enum(["planned", "completed", "cancelled"]), preparation: PreparationStateSchema.optional(), location: z.string().max(1000), url: z.string().url().max(3000).refine(value => { try { const u = new URL(value); return u.protocol === "https:" && !u.username && !u.password } catch { return false } }, "접속 링크는 HTTPS 주소를 입력해 주세요.").optional(), body: z.string().max(10000), checklist: ChecklistSchema }).strict()
 export const CareerEventSchema = EventFieldsSchema.extend(versioned).strict()
 export type CareerEvent = z.infer<typeof CareerEventSchema>
 const edit = { id: z.string().uuid(), expectedRevision: z.number().int().min(0), linkId: LinkIdSchema.optional() }
@@ -25,7 +28,23 @@ export const NoteDraftSchema = NoteFieldsSchema.extend(edit).strict()
 export const EventDraftSchema = EventFieldsSchema.extend(edit).strict()
 export type NoteDraft = z.infer<typeof NoteDraftSchema>
 export type EventDraft = z.infer<typeof EventDraftSchema>
-export interface PlannerSnapshot { links: ApplicationLink[]; notes: Note[]; events: CareerEvent[]; board?: NoteBoard }
+export interface PlannerSnapshot { links: ApplicationLink[]; notes: Note[]; events: CareerEvent[]; board?: NoteBoard; eventKindConfig?: EventKindConfig }
+
+export function eventToDraft(event: CareerEvent): EventDraft {
+  const { revision, createdAt, updatedAt, ...fields } = event
+  return { ...fields, expectedRevision: revision }
+}
+
+export function shiftEventDate(date: string, days: number) {
+  const next = new Date(`${date}T00:00:00Z`)
+  next.setUTCDate(next.getUTCDate() + days)
+  return next.toISOString().slice(0, 10)
+}
+
+export function calendarWeek(date: string) {
+  const offset = (new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7
+  return Array.from({ length: 7 }, (_, day) => shiftEventDate(date, day - offset))
+}
 
 export function calendarCells(month: string) {
   const first = new Date(`${month}-01T00:00:00Z`)

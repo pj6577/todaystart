@@ -1,6 +1,8 @@
 import { useState } from "react"
 import type { Snapshot } from "../messaging/contracts"
 import type { Note, NoteDraft, CareerEvent, EventDraft } from "../core/planner"
+import { eventToDraft } from "../core/planner"
+import { configuredEventKinds } from "../core/event-kinds"
 import { linkedRecord } from "../core/planner-lookups"
 import { readPlannerDrafts, type PlannerDraft } from "./planner-drafts"
 
@@ -15,9 +17,10 @@ export function usePlannerEditors(snapshot: Snapshot | undefined, openNotes: () 
     const recovered = readPlannerDrafts(snapshot?.dataGeneration).find((item): item is Extract<PlannerDraft, { kind: "note" }> => item.kind === "note" && (note ? item.value.id === note.id : item.value.expectedRevision === 0 && item.value.id !== noteEditor?.initial.id && item.value.linkId === linkId))
     setDetail(undefined); openNotes(); setNoteEditor({ initial: recovered?.value || initial, recovered, returnLinkId, initialMenu })
   }
-  function openEvent(event?: CareerEvent, date?: string, linkId?: string, returnLinkId?: string) {
+  function openEvent(event?: CareerEvent, date?: string, linkId?: string, returnLinkId?: string, initialKind?: string) {
     const record = linkedRecord(linkId, records, planner.links)
-    const initial: EventDraft = event ? { id: event.id, expectedRevision: event.revision, title: event.title, kind: event.kind, status: event.status, date: event.date, time: event.time, location: event.location, url: event.url, body: event.body, checklist: event.checklist, linkId: event.linkId } : { id: crypto.randomUUID(), expectedRevision: 0, title: record ? `${record.companyName} 면접` : "", kind: record ? "interview" : "other", status: "planned", date: date || new Date(Date.now() + 9 * 3600000).toISOString().slice(0,10), location: "", body: "", checklist: [], linkId }
+    const now = new Date(Date.now() + 9 * 3600000).toISOString(), kinds = configuredEventKinds(planner.eventKindConfig), preferred = initialKind || (record ? "interview" : "other")
+    const initial: EventDraft = event ? eventToDraft(event) : { id: crypto.randomUUID(), expectedRevision: 0, title: record ? `${record.companyName} 면접` : "", kind: kinds.some(kind => kind.id === preferred) ? preferred : kinds[0]!.id, status: "planned", date: date || now.slice(0,10), time: now.slice(11,16), location: "", body: "", checklist: [], linkId }
     const recovered = readPlannerDrafts(snapshot?.dataGeneration).find((item): item is Extract<PlannerDraft, { kind: "event" }> => item.kind === "event" && (event ? item.value.id === event.id : item.value.expectedRevision === 0 && item.value.linkId === linkId && (!date || item.value.date === date)))
     setDetail(undefined); setEventEditor({ initial: recovered?.value || initial, recovered, returnLinkId })
   }

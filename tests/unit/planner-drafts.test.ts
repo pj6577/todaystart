@@ -56,6 +56,7 @@ it("explains a legacy background discriminator error without hiding other errors
   expect(requestErrorMessage(legacy)).toContain("이전 버전의 백그라운드")
   expect(requestErrorMessage(legacy)).toContain("chrome://extensions")
   expect(requestErrorMessage("다른 창에서 메모가 변경되었어요.")).toBe("다른 창에서 메모가 변경되었어요.")
+  expect(requestErrorMessage(JSON.stringify([{ code: "unrecognized_keys", path: ["event"], keys: ["preparation"] }]))).toContain("chrome://extensions")
   const validation = JSON.stringify([{ code: "invalid_union_discriminator", path: ["note", "type"] }])
   expect(requestErrorMessage(validation)).toBe(validation)
 })

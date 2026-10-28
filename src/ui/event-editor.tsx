@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from "react"
 import type { ApplicationRecord } from "../core/model"
-import { eventKinds, eventStatuses, type ApplicationLink, type EventDraft } from "../core/planner"
+import { eventStatuses, preparationStates, type ApplicationLink, type EventDraft } from "../core/planner"
+import { useEventKinds } from "./event-kinds-context"
 import { rpc } from "../messaging/protocol"
 import { Notice } from "./components"
 import { ApplicationPicker, ChecklistEditor, PlannerDialog, type PlannerCloseReason } from "./planner-components"
 import { createDraftSession, type PlannerDraft } from "./planner-drafts"
 
 export function EventEditor({ initial, recovered, records, links, generation, onClose }: { initial: EventDraft; recovered?: PlannerDraft; records: ApplicationRecord[]; links: ApplicationLink[]; generation?: string; onClose: (reason?: PlannerCloseReason, message?: string) => void }) {
+  const { kinds } = useEventKinds()
   const [draft, setDraft] = useState(initial), [error, setError] = useState(""), [busy, setBusy] = useState(false), [confirm, setConfirm] = useState<"delete">()
   const dataGeneration = useRef(generation), dirty = !!recovered || JSON.stringify(draft) !== JSON.stringify(initial)
   const recovery = useRef<ReturnType<typeof createDraftSession>>()
@@ -39,7 +41,9 @@ export function EventEditor({ initial, recovered, records, links, generation, on
       <p className="small muted">{recovered ? "임시 저장한 내용을 이어 쓰고 있어요." : "작성 중인 내용은 임시 저장돼요. 일정 저장을 누르면 캘린더에 등록돼요."}</p>
       {error && <Notice error>{error}</Notice>}
       <label className="planner-field">일정 제목<input data-autofocus aria-label="일정 제목" required maxLength={200} placeholder="예: ○○기업 1차 면접" value={draft.title} onChange={event => update({ title: event.target.value })} /></label>
-      <div className="planner-field-row"><label className="planner-field">일정 종류<select aria-label="일정 종류" value={draft.kind} onChange={event => update({ kind: event.target.value as EventDraft["kind"] })}>{Object.entries(eventKinds).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label className="planner-field">진행 상태<select aria-label="일정 진행 상태" value={draft.status} onChange={event => update({ status: event.target.value as EventDraft["status"] })}>{Object.entries(eventStatuses).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label></div>
+      <div className="planner-field-row"><label className="planner-field">일정 종류<select aria-label="일정 종류" value={draft.kind} onChange={event => update({ kind: event.target.value as EventDraft["kind"] })}>{!kinds.some(kind => kind.id === draft.kind) && <option value={draft.kind} disabled>삭제된 종류 · 다시 선택해 주세요</option>}{kinds.map(kind => <option key={kind.id} value={kind.id}>{kind.label}</option>)}</select></label><label className="planner-field">진행 상태<select aria-label="일정 진행 상태" value={draft.status} onChange={event => update({ status: event.target.value as EventDraft["status"] })}>{Object.entries(eventStatuses).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label></div>
+      <label className="planner-field">준비 상태<select aria-label="일정 준비 상태" value={draft.preparation || "not_started"} onChange={event => update({ preparation: event.target.value as EventDraft["preparation"] })}>{Object.entries(preparationStates).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+      <p className="small muted">면접·과제 준비 상황을 보드에서 관리해요. 준비 완료 후에도 실제 일정은 예정으로 남아요.</p>
       <div className="planner-field-row"><label className="planner-field">날짜<input aria-label="일정 날짜" type="date" required value={draft.date} onChange={event => update({ date: event.target.value })} /></label><label className="planner-field">시간 <span className="muted">선택</span><input aria-label="일정 시간" type="time" value={draft.time || ""} onChange={event => update({ time: event.target.value || undefined })} /></label></div>
       <p className="small muted">시간을 모르면 비워 두세요. 시간 미정으로 표시해요.</p>
       <ApplicationPicker value={draft.linkId} records={records} links={links} onChange={linkId => update({ linkId })} />

@@ -2,10 +2,25 @@ import type { TodayStartDatabase } from "./database"
 import { CareerEventSchema, NoteSchema, NoteDraftSchema, EventDraftSchema } from "../core/planner"
 import { noteLinkIds, validMentions } from "../core/note-mentions"
 import { emptyNoteBoard, NoteLayoutChangeSchema, orderedNoteIds, moveNote } from "../core/note-board"
+import { configuredEventKinds, EventKindChangeSchema } from "../core/event-kinds"
 
 export class PlannerRepository {
   constructor(private readonly db: TodayStartDatabase) {}
-  async snapshot() { return this.db.transaction("r", [this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards], async () => { const board = (await this.db.noteBoards.get("main"))?.state; return { links: await this.db.applicationLinks.toArray(), notes: await this.db.notes.toArray(), events: await this.db.events.toArray(), ...(board ? { board } : {}) } }) }
+  async snapshot() { return this.db.transaction("r", [this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards, this.db.eventKindConfigs], async () => { const board = (await this.db.noteBoards.get("main"))?.state, eventKindConfig = (await this.db.eventKindConfigs.get("main"))?.state; return { links: await this.db.applicationLinks.toArray(), notes: await this.db.notes.toArray(), events: await this.db.events.toArray(), ...(board ? { board } : {}), ...(eventKindConfig ? { eventKindConfig } : {}) } }) }
+  async saveEventKinds(input: unknown) {
+    const change = EventKindChangeSchema.parse(input)
+    return this.db.transaction("rw", [this.db.eventKindConfigs, this.db.events], async () => {
+      const current = (await this.db.eventKindConfigs.get("main"))?.state
+      if ((current?.revision || 0) !== change.expectedRevision) throw new Error("다른 창에서 일정 종류가 변경되었어요. 종류 관리를 다시 열어 주세요.")
+      const known = new Set(configuredEventKinds(current).map(kind => kind.id))
+      if (change.kinds.some(kind => !known.has(kind.id) && !kind.id.startsWith("custom:"))) throw new Error("새 일정 종류를 다시 추가해 주세요.")
+      const ids = new Set(change.kinds.map(kind => kind.id)), now = new Date().toISOString()
+      await this.db.events.filter(event => !ids.has(event.kind)).modify(event => { event.kind = change.fallbackId; event.revision++; event.updatedAt = now })
+      const state = { kinds: change.kinds, revision: change.expectedRevision + 1, updatedAt: now }
+      await this.db.eventKindConfigs.put({ id: "main", state })
+      return state
+    })
+  }
   async changeNoteLayout(input: unknown) {
     const change = NoteLayoutChangeSchema.parse(input)
     return this.db.transaction("rw", [this.db.notes, this.db.noteBoards], async () => {
@@ -44,9 +59,11 @@ export class PlannerRepository {
   }
   async saveEvent(input: unknown) {
     const draft = EventDraftSchema.parse(input)
-    return this.db.transaction("rw", [this.db.events, this.db.applicationLinks], async () => {
+    return this.db.transaction("rw", [this.db.events, this.db.applicationLinks, this.db.eventKindConfigs], async () => {
       const current = await this.db.events.get(draft.id)
       if ((current?.revision || 0) !== draft.expectedRevision) throw new Error("다른 창에서 일정이 변경되었어요. 최신 일정을 다시 열어 주세요.")
+      const config = (await this.db.eventKindConfigs.get("main"))?.state
+      if (!configuredEventKinds(config).some(kind => kind.id === draft.kind)) throw new Error("선택한 일정 종류가 삭제되었어요. 다른 종류를 선택해 주세요.")
       if (draft.linkId && !await this.db.applicationLinks.get(draft.linkId)) throw new Error("연결된 지원 기록이 삭제되었어요. 연결을 해제해 주세요.")
       const { expectedRevision, ...fields } = draft, now = new Date().toISOString()
       const event = CareerEventSchema.parse({ ...fields, revision: expectedRevision + 1, createdAt: current?.createdAt || now, updatedAt: now })

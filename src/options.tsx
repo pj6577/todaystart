@@ -11,6 +11,7 @@ import { platformLabel, applicationSources, requiresStatusReview, type Applicati
 import { compareApplicationRecords, compareRecordsByColumn, type RecordSort, type RecordSortKey } from "./core/record-order"
 import { RecordReviewPanel } from "./ui/record-review-panel"
 import { ManualApplicationForm } from "./ui/manual-application-form"
+import { manualApplicationPrefill, type ManualApplicationPrefill } from "./ui/manual-application-prefill"
 import { DashboardSummary } from "./ui/dashboard-summary"
 import { DashboardHero } from "./ui/dashboard-hero"
 import { DashboardAnalytics } from "./ui/dashboard-analytics"
@@ -34,8 +35,14 @@ import { noteCountsByRecord } from "./core/planner-lookups"
 import { removePlannerDraft } from "./ui/planner-drafts"
 import { usePlannerEditors } from "./ui/use-planner-editors"
 import { useWorkspaceData } from "./ui/use-workspace-data"
+import { eventToDraft } from "./core/planner"
+import type { CareerEventChange } from "./ui/career-board"
+import type { CareerEvent } from "./core/planner"
+import { EventKindsProvider } from "./ui/event-kinds-context"
+import { EventKindsEditor } from "./ui/event-kinds-editor"
 import "./style.css"
 import "./ui/planner.css"
+import "./ui/career-board.css"
 import "./ui/note-board.css"
 
 type View = "overview" | "records" | "calendar" | "notes" | "settings"
@@ -50,6 +57,7 @@ function Options() {
   const [platform, setPlatform] = useState<ApplicationSource | "all">("all")
   const [dashboardSource, setDashboardSource] = useState<ApplicationPath | "all">("all")
   const [adding, setAdding] = useState(location.hash === "#add")
+  const [manualInitial, setManualInitial] = useState<ManualApplicationPrefill>()
   const [sort, setSort] = useState<RecordSort>({ key: "appliedAt", direction: "descending" })
   const [reviewOnly, setReviewOnly] = useState(false)
   const [editingReview, setEditingReview] = useState(false)
@@ -62,18 +70,19 @@ function Options() {
   const [deleteLinked, setDeleteLinked] = useState(false)
   const [busy, setBusy] = useState(false)
   const [resetting, setResetting] = useState(false)
+  const [managingKinds, setManagingKinds] = useState(false)
   const [resetError, setResetError] = useState("")
   const backupInput = useRef<HTMLInputElement>(null)
   const profileInput = useRef<HTMLInputElement>(null)
 
   const { snapshot, setSnapshot, drafts, load } = useWorkspaceData(
-    () => resetEditors(),
+    () => { resetEditors(); setManagingKinds(false) },
     setError
   )
   const { detail, setDetail, noteEditor, setNoteEditor, eventEditor, setEventEditor, openNote, openEvent, resumeDraft, resetEditors } = usePlannerEditors(snapshot, () => navigate("notes"))
   useTheme(snapshot?.settings.theme)
   useEffect(() => {
-    const navigate = () => { setView(viewFromHash()); if (viewFromHash() !== "notes") setNoteEditor(undefined); if (location.hash === "#add") setAdding(true) }
+    const navigate = () => { setView(viewFromHash()); if (viewFromHash() !== "notes") setNoteEditor(undefined); if (location.hash === "#add") { setManualInitial(undefined); setAdding(true) } }
     window.addEventListener("hashchange", navigate)
     return () => window.removeEventListener("hashchange", navigate)
   }, [])
@@ -106,6 +115,16 @@ function Options() {
   const activeDashboardSource = dashboardSource !== "all" && snapshot && !snapshot.records.some(record => record.status === "applied" && applicationPath(record) === dashboardSource) ? "all" : dashboardSource
   const dashboardRecords = activeDashboardSource === "all" ? snapshot?.records : snapshot?.records.filter(record => applicationPath(record) === activeDashboardSource)
   const settings = snapshot?.settings
+  async function changeCalendarEvent(event: CareerEvent, changes: CareerEventChange) {
+    const generation = snapshot?.dataGeneration
+    try {
+      const saved = await rpc({ type: "event_save", event: { ...eventToDraft(event), ...changes }, dataGeneration: generation })
+      setSnapshot(current => current?.dataGeneration === generation && current?.planner ? { ...current, planner: { ...current.planner, events: current.planner.events.map(item => item.id === saved.id && item.revision <= saved.revision ? saved : item) } } : current)
+    } catch (error) {
+      await load().catch(() => {})
+      throw error
+    }
+  }
   const reviewRecords = useMemo(() => records.filter(requiresStatusReview).sort(compareApplicationRecords), [records])
   const filtered = useMemo(() => {
     const normalizedQuery = normalizeCompanyName(query), lowerQuery = query.toLocaleLowerCase()
@@ -160,7 +179,7 @@ function Options() {
   const viewLabel = ({ overview: "대시보드", records: "지원 기록", calendar: "취업 캘린더", notes: "메모", settings: "설정" } as const)[view]
   const title = view === "overview" ? "지원 현황" : viewLabel
 
-  return <div className="app-shell">
+  return <EventKindsProvider config={planner.eventKindConfig}><div className="app-shell">
     <aside className="sidebar">
       <Brand /><div className="nav-label">워크스페이스</div>
       <nav aria-label="주 메뉴">{([
@@ -198,9 +217,9 @@ function Options() {
         </div>
         <UpcomingEvents events={planner.events} onOpen={event => openEvent(event)} onAll={() => navigate("calendar")} onNew={() => openEvent()} />
         <DashboardAnalytics records={snapshot?.records} source={activeDashboardSource} onSource={setDashboardSource} />
-      </> : view === "calendar" ? <CareerCalendar planner={planner} records={records} onNew={date => openEvent(undefined, date)} onOpen={event => openEvent(event)} onRecord={setDetail} /> : view === "notes" ? <NotesPage key={snapshot?.dataGeneration || "initial"} generation={snapshot?.dataGeneration} planner={planner} records={records} onOpen={(note, menu) => openNote(note, undefined, undefined, menu)} onNew={() => openNote()} editingId={noteEditor?.activeId || noteEditor?.initial.id} renderEditor={noteEditor ? controls => (<NoteEditor key={noteEditor.initial.id} initial={noteEditor.initial} recovered={noteEditor.recovered} records={records} links={planner.links} generation={snapshot?.dataGeneration} {...controls} menuInitiallyOpen={noteEditor.initialMenu} onIdentityChange={initial => setNoteEditor(current => current && { ...current, initial, recovered: undefined, activeId: initial.id, initialMenu: false })} onNew={() => openNote()} onClose={(_reason, message) => { const id = noteEditor.initial.id; setNoteEditor(current => current?.initial.id === id ? undefined : current); if (message) setNotice(message) }} />) : undefined} /> : <>
+      </> : view === "calendar" ? <CareerCalendar key={snapshot?.dataGeneration || "initial"} planner={planner} records={records} onNew={(date, kind) => openEvent(undefined, date, undefined, undefined, kind)} onOpen={event => openEvent(event)} onRecord={setDetail} onChange={changeCalendarEvent} onManageKinds={() => setManagingKinds(true)} /> : view === "notes" ? <NotesPage key={snapshot?.dataGeneration || "initial"} generation={snapshot?.dataGeneration} planner={planner} records={records} onOpen={(note, menu) => openNote(note, undefined, undefined, menu)} onNew={() => openNote()} editingId={noteEditor?.activeId || noteEditor?.initial.id} renderEditor={noteEditor ? controls => (<NoteEditor key={noteEditor.initial.id} initial={noteEditor.initial} recovered={noteEditor.recovered} records={records} links={planner.links} generation={snapshot?.dataGeneration} {...controls} menuInitiallyOpen={noteEditor.initialMenu} onIdentityChange={initial => setNoteEditor(current => current && { ...current, initial, recovered: undefined, activeId: initial.id, initialMenu: false })} onNew={() => openNote()} onClose={(_reason, message) => { const id = noteEditor.initial.id; setNoteEditor(current => current?.initial.id === id ? undefined : current); if (message) setNotice(message) }} />) : undefined} /> : <>
         <div ref={reviewPanel}>{reviewOnly && <RecordReviewPanel records={reviewRecords} settings={settings} run={snapshot?.historyRun} onShowAll={() => setReviewOnly(false)} />}</div>
-        <SubmissionActivity attempts={snapshot?.submissionAttempts} records={records} onEdit={record => editRecord(record, requiresStatusReview(record), true)} onAdd={() => setAdding(true)} />
+        <SubmissionActivity attempts={snapshot?.submissionAttempts} records={records} onEdit={record => editRecord(record, requiresStatusReview(record), true)} onAdd={attempt => { setManualInitial(manualApplicationPrefill(attempt)); setAdding(true) }} />
 
         {!reviewOnly && <RecordImports ready={!!snapshot} records={records} consent={settings?.consent} reports={snapshot?.reports} completions={snapshot?.historyCompletions} run={snapshot?.historyRun} />}
 
@@ -221,10 +240,11 @@ function Options() {
     <input hidden ref={backupInput} type="file" accept=".json,application/json" aria-label="JSON 백업 파일" onChange={e => { void importFile(e.target.files?.[0], "backup"); e.target.value = "" }} />
     <input hidden ref={profileInput} type="file" accept=".json,application/json" aria-label="선택자 JSON 파일" onChange={e => { void importFile(e.target.files?.[0], "profile"); e.target.value = "" }} />
 
-    {adding && <ManualApplicationForm onClose={() => { setAdding(false); if (location.hash === "#add") navigate("records") }} onSaved={() => { setAdding(false); setNotice("지원 기록을 추가했습니다."); if (location.hash === "#add") navigate("records"); void load().catch(error => setError(error.message)) }} />}
+    {adding && <ManualApplicationForm key={manualInitial?.submissionAttemptId || "manual"} initial={manualInitial} generation={snapshot?.dataGeneration} onClose={() => { setAdding(false); setManualInitial(undefined); if (location.hash === "#add") navigate("records") }} onSaved={() => { setAdding(false); setManualInitial(undefined); setNotice("지원 기록을 추가했습니다."); if (location.hash === "#add") navigate("records"); void load().catch(error => setError(error.message)) }} />}
     {editing && <RecordEditDialog record={editing} review={editingReview} focusStatus={editingStatus} hasNext={reviewRecords.some(record => record.id !== editing.id)} busy={busy} onChange={setEditing} onClose={() => setEditing(undefined)} onSave={saveEditing} />}
     {deleting && <RecordDeleteDialog record={deleting} linked={deleteLinked} busy={busy} onLinkedChange={setDeleteLinked} onClose={() => setDeleting(undefined)} onDelete={() => void action(async () => { await rpc({ type: "remove", id: deleting.id, linked: deleteLinked ? "delete" : "keep" }); setDeleting(undefined); setNotice("기록을 삭제했습니다.") })} />}
 
-  </div>
+    {managingKinds && <EventKindsEditor config={planner.eventKindConfig} events={planner.events} generation={snapshot?.dataGeneration} onClose={() => setManagingKinds(false)} onSaved={load} />}
+  </div></EventKindsProvider>
 }
 export default Options

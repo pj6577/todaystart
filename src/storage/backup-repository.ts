@@ -5,6 +5,7 @@ import { normalizeCompanyName } from "../core/company"
 import { applicationIdentity } from "../core/identity"
 import { noteLinkIds, validMentions } from "../core/note-mentions"
 import { BackupSchema } from "./backup-schema"
+import { mergeEventKindConfigs } from "../core/event-kinds"
 
 interface ApplicationStore {
   list(): Promise<ApplicationRecord[]>
@@ -15,7 +16,7 @@ interface ApplicationStore {
 // Restore and its nested merges share the caller's Dexie transaction.
 export class BackupRepository {
   constructor(private readonly db: TodayStartDatabase, private readonly applications: ApplicationStore) {}
-  async backup() { return this.db.transaction("r", [this.db.applications, this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards], async () => ({ format: "todaystart" as const, version: 2 as const, exportedAt: new Date().toISOString(), records: await this.applications.list(), ...(await this.applications.plannerSnapshot()) })) }
+  async backup() { return this.db.transaction("r", [this.db.applications, this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards, this.db.eventKindConfigs], async () => ({ format: "todaystart" as const, version: 2 as const, exportedAt: new Date().toISOString(), records: await this.applications.list(), ...(await this.applications.plannerSnapshot()) })) }
   async restore(input: unknown) {
     const backup = BackupSchema.parse(input)
     if (backup.version === 2) {
@@ -25,8 +26,9 @@ export class BackupRepository {
       if (backup.board && [...backup.board.order, ...Object.keys(backup.board.sizes)].some(id => !noteIds.has(id))) throw new Error("백업의 메모 배치를 확인해 주세요.")
       if (new Set(backup.links.map(link => link.recordId)).size !== backup.links.length || backup.links.some(link => !records.has(link.recordId)) || [...backup.notes, ...backup.events].some(item => item.linkId && !links.has(item.linkId))) throw new Error("백업의 메모·일정 연결을 확인해 주세요.")
       if (backup.notes.some(note => noteLinkIds(note).some(id => !links.has(id)) || validMentions(note.body, note.mentions).length !== (note.mentions || []).length)) throw new Error("백업의 기업 언급을 확인해 주세요.")
+      if (backup.events.some(event => event.kind.startsWith("custom:") && !backup.eventKindConfig?.kinds.some(kind => kind.id === event.kind))) throw new Error("백업의 사용자 일정 종류를 확인해 주세요.")
     }
-    return this.db.transaction("rw", [this.db.applications, this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards], async () => {
+    return this.db.transaction("rw", [this.db.applications, this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards, this.db.eventKindConfigs], async () => {
     const records: ApplicationRecord[] = [], restoredIds = new Map<string, string>()
     for (const record of backup.records) {
       const alias = await this.db.applicationLinks.where("aliases").equals(record.id).first()
@@ -67,6 +69,8 @@ export class BackupRepository {
       const local = (await this.db.noteBoards.get("main"))?.state
       if (!local || backup.board.updatedAt > local.updatedAt) await this.db.noteBoards.put({ id: "main", state: { ...backup.board, revision: (local?.revision || 0) + 1 } })
     }
+    const config = mergeEventKindConfigs((await this.db.eventKindConfigs.get("main"))?.state, backup.version === 2 ? backup.eventKindConfig : undefined, await this.db.events.toArray())
+    if (config) await this.db.eventKindConfigs.put({ id: "main", state: config })
     return { ...result, notes: backup.version === 2 ? backup.notes.length : 0, events: backup.version === 2 ? backup.events.length : 0 }
     })
   }
