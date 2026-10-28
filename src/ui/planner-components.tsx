@@ -1,7 +1,8 @@
 import React, { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react"
 import type { ApplicationRecord } from "../core/model"
 import type { ApplicationLink, CareerEvent, Note } from "../core/planner"
-import { eventKinds, eventStatuses } from "../core/planner"
+import { eventStatuses } from "../core/planner"
+import { useEventKinds } from "./event-kinds-context"
 import { Icon } from "./components"
 import { linkedRecordMap } from "../core/planner-lookups"
 export { linkedRecord } from "../core/planner-lookups"
@@ -44,5 +45,6 @@ export function PlannerDialog({ title, onClose, children, wide = false }: { titl
   }}><section ref={section} className={`planner-drawer${wide ? " wide" : ""}`} role="dialog" aria-modal="true" aria-labelledby={titleId}><div className="planner-drawer-heading"><h2 id={titleId}>{title}</h2><button type="button" className="icon-btn" aria-label="닫기" onClick={() => onClose("outside")}><Icon name="close" size={19} /></button></div>{children}</section></div>
 }
 export function EventItem({ event, record, onOpen }: { event: CareerEvent; record?: ApplicationRecord; onOpen: () => void }) {
-  return <button type="button" className={`career-event-item ${event.kind} ${event.status}`} onClick={onOpen}><span className="event-kind">{eventKinds[event.kind]}</span><div><strong>{event.title}</strong><span>{event.date.replaceAll("-", ".")} · {event.time || "시간 미정"}{record ? ` · ${record.companyName}` : ""}</span></div>{event.status !== "planned" && <small>{eventStatuses[event.status]}</small>}<Icon name="arrow" size={16} /></button>
+  const { kindLabel } = useEventKinds()
+  return <button type="button" className={`career-event-item ${event.kind} ${event.status}`} onClick={onOpen}><span className="event-kind">{kindLabel(event.kind)}</span><div><strong>{event.title}</strong><span>{event.date.replaceAll("-", ".")} · {event.time || "시간 미정"}{record ? ` · ${record.companyName}` : ""}</span></div>{event.status !== "planned" && <small>{eventStatuses[event.status]}</small>}<Icon name="arrow" size={16} /></button>
 }

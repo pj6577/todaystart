@@ -37,6 +37,7 @@ export interface ResponseMap {
   note_save: StoredResult<"saveNote">
   note_layout: StoredResult<"changeNoteLayout">
   event_save: StoredResult<"saveEvent">
+  event_kinds_save: StoredResult<"saveEventKinds">
   planner_remove: void
   reset_data: boolean
   backup: StoredResult<"backup">

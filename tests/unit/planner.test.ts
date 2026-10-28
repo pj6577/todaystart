@@ -2,7 +2,7 @@ import Dexie from "dexie"
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { ApplicationRepository, TodayStartDatabase } from "../../src/storage/repository"
 import { applicationIdentity } from "../../src/core/identity"
-import { calendarCells, upcomingEvents, EventDraftSchema, type EventDraft, type NoteDraft } from "../../src/core/planner"
+import { calendarCells, calendarWeek, eventToDraft, shiftEventDate, upcomingEvents, EventDraftSchema, type EventDraft, type NoteDraft } from "../../src/core/planner"
 import { record } from "../helpers"
 import { insertMention, noteLinkIds } from "../../src/core/note-mentions"
 
@@ -11,6 +11,27 @@ beforeEach(() => { repository = new ApplicationRepository(new TodayStartDatabase
 afterEach(async () => { await repository.db.delete() })
 const noteDraft = (linkId?: string): NoteDraft => ({ id: crypto.randomUUID(), expectedRevision: 0, title: "면접 준비", body: "질문과 답변", pinned: false, checklist: [], linkId })
 const eventDraft = (linkId?: string): EventDraft => ({ id: crypto.randomUUID(), expectedRevision: 0, title: "1차 면접", kind: "interview", date: "2026-10-23", time: "14:00", status: "planned", location: "온라인", body: "준비하기", checklist: [], linkId })
+
+it("persists preparation independently of the appointment and round-trips it through backup", async () => {
+  const legacy = await repository.saveEvent(eventDraft())
+  expect(legacy.preparation).toBeUndefined()
+  const ready = await repository.saveEvent({ ...eventToDraft(legacy), preparation: "ready" })
+  expect(ready).toMatchObject({ date: legacy.date, time: legacy.time, status: "planned", preparation: "ready", revision: 2 })
+  expect(EventDraftSchema.safeParse(eventToDraft(ready)).success).toBe(true)
+  await expect(repository.saveEvent({ ...eventToDraft(legacy), preparation: "in_progress" })).rejects.toThrow("다른 창")
+  const backup = await repository.backup()
+  await repository.clear(); await repository.restore(backup)
+  expect((await repository.plannerSnapshot()).events[0]).toMatchObject({ id: legacy.id, preparation: "ready", status: "planned", date: legacy.date, time: legacy.time })
+  expect(EventDraftSchema.safeParse({ ...eventDraft(), preparation: "invalid" }).success).toBe(false)
+})
+
+it("builds Monday-to-Sunday board weeks across months, years, and leap days", () => {
+  expect(calendarWeek("2026-11-01")).toEqual(["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01"])
+  expect(calendarWeek("2027-01-01")[0]).toBe("2026-12-28")
+  expect(calendarWeek("2028-02-29")).toContain("2028-02-29")
+  expect(shiftEventDate("2026-12-31", 1)).toBe("2027-01-01")
+  expect(shiftEventDate("2028-03-01", -1)).toBe("2028-02-29")
+})
 
 it("rolls back records and links when a later planner write fails during restore", async () => {
   await repository.merge([record()])

@@ -5,10 +5,23 @@ import { isBuiltInHistoryUrl } from "../platforms/history"
 import { getHistoryRun } from "../collection/history-run"
 import { saveReport } from "../storage/settings"
 import type { RequestHandlers } from "./context"
+import { jobIdFromUrl, safeJobUrl } from "../core/urls"
+import type { ApplicationRecord } from "../core/model"
 
 export const applications = {
-  async manual_create(request, { repository }) {
-    const record = await repository.createManual(request.application)
+  async manual_create(request, { repository, submissions }) {
+    if ((request.dataGeneration !== undefined || request.submissionAttemptId) && request.dataGeneration !== await getDataGeneration()) throw new Error("지원 기록이 초기화되었어요. 직접 추가 창을 닫고 다시 열어 주세요.")
+    let linked: Pick<ApplicationRecord, "submissionAttemptId" | "submissionStage" | "sourceJobId" | "internalGiNo" | "sourceApplicationId"> | undefined
+    if (request.submissionAttemptId) {
+      const attempt = (await submissions.snapshot()).find(attempt => attempt.id === request.submissionAttemptId)
+      if (!attempt || attempt.platform !== request.application.platform) throw new Error("지원 진행 항목이 변경되었어요. 직접 추가 창을 다시 열어 주세요.")
+      const publicId = attempt.context?.sourceJobId || (attempt.platform !== "jobkorea" ? attempt.sourceJobId : undefined)
+      const url = request.application.jobUrl?.trim()
+      if (url && publicId && jobIdFromUrl(safeJobUrl(url, attempt.platform)) !== publicId) throw new Error("이 지원 항목과 다른 공고 주소예요. 공고 주소를 확인하거나 별도의 기록으로 추가해 주세요.")
+      linked = { submissionAttemptId: attempt.id, submissionStage: request.application.status === "applied" ? "confirmed" : attempt.stage, sourceJobId: publicId, internalGiNo: attempt.platform === "jobkorea" ? attempt.context?.internalGiNo || attempt.sourceJobId : undefined, sourceApplicationId: attempt.sourceApplicationId }
+    }
+    const record = await repository.createManual(request.application, linked)
+    if (linked) await submissions.reconcile()
     await chrome.storage.local.set({ revision: crypto.randomUUID() })
     return record
   },

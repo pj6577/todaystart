@@ -18,12 +18,12 @@ export class ApplicationRepository {
     this.backups = new BackupRepository(db, this)
   }
   list() { return this.db.applications.toArray() }
-  async createManual(input: unknown) {
+  async createManual(input: unknown, submission?: Pick<ApplicationRecord, "submissionAttemptId" | "submissionStage" | "sourceJobId" | "internalGiNo" | "sourceApplicationId">) {
     const draft = ManualApplicationSchema.parse(input)
     const jobUrl = draft.jobUrl ? safeJobUrl(draft.jobUrl, draft.platform) : undefined
     if (draft.jobUrl && !jobUrl) throw new Error("공고 주소는 로그인 정보가 없는 HTTPS 주소를 입력해 주세요. 기업 홈페이지 주소는 ‘직접 지원’을 선택해 주세요.")
     const now = new Date().toISOString()
-    const record: Omit<ApplicationRecord, "id"> = { ...draft, sourceLabel: draft.platform === "manual" ? draft.sourceLabel : undefined, jobUrl, sourceJobId: draft.platform === "manual" ? undefined : jobIdFromUrl(jobUrl), normalizedCompanyName: normalizeCompanyName(draft.companyName), evidence: "manual" as const, collectedAt: now, lastSeenAt: now, lastSyncedAt: now }
+    const record: Omit<ApplicationRecord, "id"> = { ...draft, ...submission, sourceLabel: draft.platform === "manual" ? draft.sourceLabel : undefined, jobUrl, sourceJobId: draft.platform === "manual" ? undefined : submission?.sourceJobId || jobIdFromUrl(jobUrl), normalizedCompanyName: normalizeCompanyName(draft.companyName), evidence: "manual" as const, collectedAt: now, lastSeenAt: now, lastSyncedAt: now }
     if (!record.normalizedCompanyName) throw new Error("기업명을 확인해 주세요.")
     if (record.platform === "manual") {
       const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(applicationIdentity(record)))
@@ -119,6 +119,7 @@ export class ApplicationRepository {
   changeNoteLayout(input: unknown) { return this.planner.changeNoteLayout(input) }
   saveNote(input: unknown) { return this.planner.saveNote(input) }
   saveEvent(input: unknown) { return this.planner.saveEvent(input) }
+  saveEventKinds(input: unknown) { return this.planner.saveEventKinds(input) }
   deletePlanner(kind: "note" | "event", id: string, revision: number) { return this.planner.deletePlanner(kind, id, revision) }
   async delete(id: string, linked: "keep" | "delete" = "keep") {
     await this.db.transaction("rw", [this.db.applications, this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards], async () => {
@@ -132,7 +133,7 @@ export class ApplicationRepository {
       if (linked === "delete") await this.planner.pruneNoteBoard()
     })
   }
-  async clear() { await this.db.transaction("rw", [this.db.applications, this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards], async () => { await this.db.applications.clear(); await this.db.applicationLinks.clear(); await this.db.notes.clear(); await this.db.events.clear(); await this.db.noteBoards.clear() }) }
+  async clear() { await this.db.transaction("rw", [this.db.applications, this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards, this.db.eventKindConfigs], async () => { await this.db.applications.clear(); await this.db.applicationLinks.clear(); await this.db.notes.clear(); await this.db.events.clear(); await this.db.noteBoards.clear(); await this.db.eventKindConfigs.clear() }) }
   backup() { return this.backups.backup() }
   restore(input: unknown) { return this.backups.restore(input) }
 }

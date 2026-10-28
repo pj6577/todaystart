@@ -19,7 +19,10 @@ export const planner = {
   async event_save(request, { repository }) {
     return mutatePlanner(request.dataGeneration, () => repository.saveEvent(request.event))
   },
+  async event_kinds_save(request, { repository }) {
+    return mutatePlanner(request.dataGeneration, () => repository.saveEventKinds(request.change))
+  },
   async planner_remove(request, { repository }) {
     return mutatePlanner(request.dataGeneration, () => repository.deletePlanner(request.kind, request.id, request.revision))
   }
-} satisfies Pick<RequestHandlers, "note_save" | "note_layout" | "event_save" | "planner_remove">
+} satisfies Pick<RequestHandlers, "note_save" | "note_layout" | "event_save" | "event_kinds_save" | "planner_remove">

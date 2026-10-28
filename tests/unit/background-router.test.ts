@@ -6,6 +6,7 @@ import { createRequestHandler } from "../../src/background/router"
 import { rpc, type Request } from "../../src/messaging/protocol"
 import type { ResponseMap, Snapshot } from "../../src/messaging/contracts"
 import type { Note } from "../../src/core/planner"
+import { record } from "../helpers"
 
 const history = vi.hoisted(() => ({ run: undefined as import("../../src/collection/history-run-model").HistoryRun | undefined, start: vi.fn(), stop: vi.fn().mockResolvedValue(true) }))
 vi.mock("../../src/collection/history-run", () => ({ getHistoryRun: async () => history.run, resumeHistoryRun: vi.fn(), startHistoryRun: history.start, stopHistoryRun: history.stop }))
@@ -71,6 +72,33 @@ it("rejects stale writes before saving and publishes only planner invalidation o
   await handle({ type: "note_save", note, dataGeneration: local.dataGeneration }, ui)
   expect((await repository.plannerSnapshot()).notes).toHaveLength(1)
   expect(local.plannerRevision).toEqual(expect.any(String)); expect(local.revision).toBeUndefined()
+})
+
+it("links a manually resolved attempt, rejects stale or mismatched context, and merges a pending record", async () => {
+  const attempt = { id: crypto.randomUUID(), platform: "wanted" as const, tabId: 1, frameId: 0, sourceJobId: "100", stage: "unverified" as const, reason: "timeout" as const, startedAt: "2026-10-20T01:00:00Z", updatedAt: "2026-10-20T01:00:00Z" }
+  vi.mocked(submissions.snapshot).mockResolvedValue([attempt])
+  const reconcile = vi.spyOn(submissions, "reconcile").mockResolvedValue()
+  const request = { type: "manual_create", submissionAttemptId: attempt.id, dataGeneration: local.dataGeneration, application: { platform: "wanted", companyName: "확인한 기업", jobTitle: "개발자", appliedAt: "2026-10-20", status: "applied", jobUrl: "https://www.wanted.co.kr/wd/100" } }
+  await expect(handle({ ...request, dataGeneration: crypto.randomUUID() }, ui)).rejects.toThrow("초기화")
+  await expect(handle({ ...request, submissionAttemptId: crypto.randomUUID() }, ui)).rejects.toThrow("변경")
+  await expect(handle({ ...request, application: { ...request.application, platform: "jobkorea" } }, ui)).rejects.toThrow("변경")
+  await expect(handle({ ...request, application: { ...request.application, jobUrl: "https://www.wanted.co.kr/wd/999" } }, ui)).rejects.toThrow("다른 공고")
+  expect(await repository.list()).toHaveLength(0)
+  await repository.merge([record({ platform: "wanted", companyName: "확인한 기업", sourceJobId: "100", sourceApplicationId: undefined, appliedAt: undefined, status: "pending_confirmation", submissionAttemptId: attempt.id, submissionStage: "unverified" })])
+  await handle(request, ui)
+  expect(await repository.list()).toHaveLength(1)
+  expect((await repository.list())[0]).toMatchObject({ companyName: "확인한 기업", sourceJobId: "100", appliedAt: "2026-10-20", status: "applied", submissionAttemptId: attempt.id, submissionStage: "confirmed", evidence: "manual" })
+  expect(reconcile).toHaveBeenCalledTimes(1)
+})
+
+it("limits kind management to the current extension generation and invalidates the planner", async () => {
+  const change = { kinds: [{ id: "other", label: "내 일정" }], expectedRevision: 0, fallbackId: "other" }
+  await expect(handle({ type: "event_kinds_save", change, dataGeneration: local.dataGeneration }, site)).rejects.toThrow()
+  await expect(handle({ type: "event_kinds_save", change, dataGeneration: crypto.randomUUID() }, ui)).rejects.toThrow("초기화")
+  await handle({ type: "event_kinds_save", change, dataGeneration: local.dataGeneration }, ui)
+  expect((await repository.plannerSnapshot()).eventKindConfig?.kinds).toEqual(change.kinds)
+  expect(local.plannerRevision).toEqual(expect.any(String))
+  expect(local.revision).toBeUndefined()
 })
 
 it("does not retry a failed run owned by another tab", async () => {

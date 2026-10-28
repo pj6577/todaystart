@@ -2,6 +2,7 @@ import Dexie, { type Table } from "dexie"
 import type { ApplicationRecord } from "../core/model"
 import type { ApplicationLink, Note, CareerEvent } from "../core/planner"
 import type { NoteBoard } from "../core/note-board"
+import type { EventKindConfig } from "../core/event-kinds"
 
 export class TodayStartDatabase extends Dexie {
   applications!: Table<ApplicationRecord, string>
@@ -9,6 +10,7 @@ export class TodayStartDatabase extends Dexie {
   notes!: Table<Note, string>
   events!: Table<CareerEvent, string>
   noteBoards!: Table<{ id: string; state: NoteBoard }, string>
+  eventKindConfigs!: Table<{ id: string; state: EventKindConfig }, string>
   constructor(name = "todaystart") {
     super(name)
     this.version(1).stores({ applications: "id, platform, normalizedCompanyName, appliedAt, sourceApplicationId, sourceJobId, status" })
@@ -17,5 +19,6 @@ export class TodayStartDatabase extends Dexie {
       await tx.table("applicationLinks").bulkPut(records.map(record => ({ id: crypto.randomUUID(), recordId: record.id, aliases: [record.id] })))
     })
     this.version(3).stores({ noteBoards: "id" })
+    this.version(4).stores({ eventKindConfigs: "id" })
   }
 }
