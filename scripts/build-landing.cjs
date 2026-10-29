@@ -75,8 +75,8 @@ const files = [
   ]),
   ...["light", "dark"].flatMap((theme) => [
     ...["mp4", "webm"].map((format) => [
-      `landing/assets/motion/dashboard-${theme}.${format}`,
-      `assets/dashboard-motion-${theme}.${format}`
+      `landing/assets/motion/todaystart-intro-${theme}.${format}`,
+      `assets/todaystart-intro-${theme}.${format}`
     ]),
     [
       `landing/assets/motion/dashboard-${theme}-poster.png`,

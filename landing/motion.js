@@ -28,7 +28,7 @@
     sourceTheme = theme()
     video.dataset.ready = "false"
     const format = formats[formatIndex]
-    video.src = `./assets/dashboard-motion-${sourceTheme}.${format}`
+    video.src = `./assets/todaystart-intro-${sourceTheme}.${format}`
     video.load()
   }
   async function sync() {
