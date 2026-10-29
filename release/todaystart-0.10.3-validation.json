@@ -1,0 +1,25 @@
+{
+  "file": "release/todaystart-0.10.3.zip",
+  "version": "0.10.3",
+  "sourceCommit": "14e95dad76a32ef44bc5e3efe9d1d154188f52fc",
+  "fixCommit": "aaf7886cf2eb2e28289cc9e225df2cb750d0290d",
+  "bytes": 2737781,
+  "files": 45,
+  "sha256": "6363c06a5f22163446cfa03a3cde9812ca87a05c14412db1624a476ce7b39246",
+  "permissionsUnchanged": true,
+  "permissionsComparedWith": "0.10.2",
+  "archiveIntegrity": "passed",
+  "buildBytesMatch": true,
+  "manifestResourcesPresent": true,
+  "mainWorldObserverRegistered": true,
+  "licensesIncluded": true,
+  "excludedHistoricalAssets": true,
+  "secretPatternMatches": [],
+  "validation": {
+    "typecheck": "passed",
+    "unitTestFiles": 43,
+    "unitTests": 501,
+    "browserTests": 28,
+    "build": "passed"
+  }
+}
