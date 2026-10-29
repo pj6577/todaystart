@@ -1,7 +1,7 @@
 {
   "name": "todaystart",
   "displayName": "오늘시작",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "private": true,
   "license": "SEE LICENSE IN LICENSE",
   "description": "사람인, 잡코리아, 원티드, 리멤버의 지원 기록을 모아 중복 지원을 확인하고, 메모와 취업 일정을 함께 관리하세요.",

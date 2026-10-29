@@ -20,6 +20,8 @@ release/*
 !release/todaystart-0.10.1-validation.json
 !release/todaystart-0.10.2.sha256
 !release/todaystart-0.10.2-validation.json
+!release/todaystart-0.10.3.sha256
+!release/todaystart-0.10.3-validation.json
 
 # Only curated documentation and representative screenshots are tracked.
 docs/*
@@ -30,6 +32,7 @@ docs/*
 !docs/validation-0.9.3.md
 !docs/validation-0.10.0.md
 !docs/validation-0.10.2.md
+!docs/validation-0.10.3.md
 !docs/validation-saramin-completion-layout.md
 !docs/secret-audit-2026-10-27.md
 !docs/images/
