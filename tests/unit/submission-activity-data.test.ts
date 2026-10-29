@@ -5,18 +5,19 @@ import { record } from "../helpers"
 
 const attempt = (changes: Partial<SubmissionAttempt> = {}): SubmissionAttempt => ({
   id: crypto.randomUUID(), platform: "jobkorea", tabId: 1, frameId: 0, sourceJobId: "9000",
+  requestId: crypto.randomUUID(),
   context: { sourceJobId: "100", internalGiNo: "9000", companyName: "가상 지원 기업", jobTitle: "디자이너", jobUrl: "https://www.jobkorea.co.kr/Recruit/GI_Read/100" },
   stage: "unverified", reason: "navigation", startedAt: "2026-10-28T01:00:00Z", updatedAt: "2026-10-28T01:02:00Z", ...changes
 })
 const context = (sourceJobId: string, internalGiNo: string) => ({ sourceJobId, internalGiNo, companyName: "가상 지원 기업", jobTitle: "디자이너", jobUrl: `https://www.jobkorea.co.kr/Recruit/GI_Read/${sourceJobId}` })
 
 it("groups verified public and internal form IDs and prefers an existing record over a new manual form", () => {
-  const owner = attempt(), opened = attempt({ stage: "started", updatedAt: "2026-10-28T02:00:00Z" }), retry = attempt({ context: undefined, updatedAt: "2026-10-28T02:01:00Z" })
+  const owner = attempt(), opened = attempt({ stage: "started", requestId: undefined, updatedAt: "2026-10-28T02:00:00Z" }), retry = attempt({ context: undefined, updatedAt: "2026-10-28T02:01:00Z" })
   const pending = record({ platform: "jobkorea", submissionAttemptId: owner.id, status: "pending_confirmation", submissionStage: "unverified" })
   const groups = submissionActivityGroups([owner, opened, retry], [pending])
   expect(groups).toHaveLength(1)
   expect(groups[0]).toMatchObject({ attempt: owner, record: pending })
-  expect(groups[0]!.attempts.map(item => item.id)).toEqual([owner.id, opened.id, retry.id])
+  expect(groups[0]!.attempts.map(item => item.id)).toEqual([owner.id, retry.id])
 })
 
 it("keeps platforms, different postings at the same company, and unverified internal IDs separate", () => {
@@ -63,9 +64,29 @@ it("groups by the Korean submission day and keeps new days visible", () => {
 })
 
 it("omits opened-only notices and keeps actionable results ahead of opened tabs", () => {
-  const opened = attempt({ stage: "started" }), waiting = attempt({ stage: "submitting" }), unverified = attempt()
+  const opened = attempt({ stage: "started", requestId: undefined }), waiting = attempt({ stage: "submitting" }), unverified = attempt()
   expect(submissionActivityGroups([opened], [])).toEqual([])
   expect(submissionActivityGroups([opened, waiting, unverified], [])[0]!.attempt.id).toBe(unverified.id)
+})
+
+it.each(["closed", "timeout", "navigation", "result_unknown"] as const)("hides legacy Jobkorea notices without a submitted request: %s", reason => {
+  const old = attempt({ stage: "unverified", reason, requestId: undefined })
+  const original = structuredClone(old)
+  expect(submissionActivityGroups([old], [])).toEqual([])
+  expect(old).toEqual(original)
+})
+
+it.each(["submitting", "unverified"] as const)("a Jobkorea button click without a request may be validation/cancellation, not an actionable %s notice", stage => {
+  const click = attempt({ stage, requestId: undefined, clickedAt: "2026-10-28T01:00:10Z" })
+  expect(submissionActivityGroups([click], [])).toEqual([])
+  const submitted = attempt({ ...click, requestId: crypto.randomUUID() })
+  expect(submissionActivityGroups([submitted], [])[0]!.attempt).toEqual(submitted)
+})
+
+it("keeps independent completion evidence and Wanted's existing click-based review behavior", () => {
+  const completed = attempt({ requestId: undefined, context: undefined, stage: "confirmed" })
+  const wanted = attempt({ platform: "wanted", requestId: undefined, clickedAt: "2026-10-28T01:00:10Z", context: undefined })
+  expect(submissionActivityGroups([completed, wanted], [])).toHaveLength(2)
 })
 
 it("hides a confirmed posting's redundant notices but preserves a contextless completion needing manual details", () => {

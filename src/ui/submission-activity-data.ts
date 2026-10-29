@@ -34,6 +34,11 @@ export function submissionActivityGroups(attempts: SubmissionAttempt[], records:
   }
   const groups = new Map<string, SubmissionAttempt[]>()
   for (const attempt of attempts) {
+    // Old builds marked even opened-and-closed windows as unverified. A stage
+    // alone is not submission evidence. Jobkorea's final-button click can also
+    // stop at validation/confirmation; review it only after an observed request.
+    // Wanted has a separate click + completion-route flow and no request hook.
+    if (attempt.stage !== "confirmed" && !attempt.requestId && !(attempt.platform === "wanted" && attempt.clickedAt)) continue
     const known = aliases.get(aliasKey(attempt.sourceJobId, day(attempt)))
     const publicId = attempt.context?.sourceJobId || (attempt.platform !== "jobkorea" ? attempt.sourceJobId : known?.size === 1 ? [...known][0] : undefined)
     const key = JSON.stringify([attempt.platform, publicId ? "posting" : "form", publicId || attempt.sourceJobId, day(attempt)])

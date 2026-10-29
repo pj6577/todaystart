@@ -408,6 +408,48 @@ for (const transport of ["fetch", "xhr"] as const) {
   })
 }
 
+for (const presentation of ["popup", "iframe"] as const) {
+for (const action of ["opened-only", "cancel-confirmation", "invalid-form"] as const) {
+test(`잡코리아 탐색 구분: ${presentation} ${action}은 확인 필요나 지원 기록을 만들지 않음`, async ({ ui, context }) => {
+  let posts = 0
+  await context.route("https://www.jobkorea.co.kr/**", route => {
+    const pathname = new URL(route.request().url()).pathname
+    if (pathname === "/Recruit/OnPass/OnPassApply") { posts++; return route.fulfill({ body: "unexpected submit" }) }
+    const trigger = '<a target="apply-window" href="/Recruit/OnPass?giNo=51797123">지원창 열기</a>'
+    const detail = jobkoreaSubmissionDetail.replace('<a target="_blank" href="/Recruit/OnPass?giNo=12345">지원창 열기</a>', trigger) +
+      (presentation === "iframe" ? '<iframe name="apply-window" title="지원서 확인" src="about:blank"></iframe>' : "")
+    const form = `<form method="post" action="/Recruit/OnPass/OnPassApply">${action === "invalid-form" ? '<input required aria-label="필수 항목">' : ""}<button class="footer-btn dev-btn-apply" type="${action === "invalid-form" ? "submit" : "button"}">지원하기</button></form><script>document.querySelector('button').addEventListener('click',()=>{${action === "cancel-confirmation" ? "if(confirm('최종 제출할까요?'))document.querySelector('form').submit()" : ""}})</script>`
+    return route.fulfill({ contentType: "text/html; charset=utf-8", body: pathname === "/Recruit/OnPass" ? form : detail })
+  })
+  await ui.getByRole("button", { name: "지원 기록 관리", exact: true }).click()
+  const detail = await context.newPage()
+  await detail.goto("https://www.jobkorea.co.kr/Recruit/GI_Read/50194254")
+  const opening = presentation === "popup" ? context.waitForEvent("page") : undefined
+  await detail.getByRole("link", { name: "지원창 열기", exact: true }).click()
+  const popup = opening ? await opening : undefined
+  const form = popup || detail.frameLocator('iframe[title="지원서 확인"]')
+  await expect.poll(async () => (await rpc<Snapshot>(ui, { type: "snapshot" })).submissionAttempts?.[0]?.stage).toBe("started")
+  if (action !== "opened-only") {
+    if (action === "cancel-confirmation") (popup || detail).once("dialog", dialog => dialog.dismiss())
+    await form.getByRole("button", { name: "지원하기", exact: true }).click()
+    await expect.poll(async () => (await rpc<Snapshot>(ui, { type: "snapshot" })).submissionAttempts?.[0]?.clickedAt).toBeTruthy()
+  }
+  expect(posts).toBe(0)
+  expect((await rpc<Snapshot>(ui, { type: "snapshot" })).submissionAttempts?.[0]?.requestId).toBeUndefined()
+  await expect(ui.getByRole("region", { name: "지원 진행 상태", exact: true })).toHaveCount(0)
+  if (popup) {
+    await popup.close()
+    await expect.poll(async () => !!(await rpc<Snapshot>(ui, { type: "snapshot" })).submissionAttempts?.[0]?.closedAt).toBe(true)
+  } else await detail.locator('iframe[title="지원서 확인"]').evaluate(frame => frame.remove())
+  await ui.reload()
+  await expect(ui.getByRole("heading", { name: "지원 기록", exact: true, level: 1 })).toBeVisible()
+  await expect(ui.getByRole("region", { name: "지원 진행 상태", exact: true })).toHaveCount(0)
+  expect(await count(ui)).toBe(0)
+  expect(posts).toBe(0)
+})
+}
+}
+
 for (const popupKind of ["opener", "noopener", "script"] as const) {
 test(`최종 제출 관찰: 잡코리아 서로 다른 ID, ${popupKind} 팝업 form.submit은 확인 필요로 유지`, async ({ ui, context }) => {
   let posts = 0
@@ -1250,7 +1292,7 @@ test("대시보드 사이트 심벌과 가져오기 버튼: 직접 수집 시작
   await expect(ui).toHaveURL(initialUrl)
 })
 
-test("지원 현황 대조: 가져온 네 건이 확인 필요 안내를 해소하고 새로고침 후에도 중복되지 않음", async ({ ui }) => {
+test("지원 현황 대조: 클릭만 관찰한 시도도 가져온 네 건과 대조하고 중복되지 않음", async ({ ui }) => {
   const attempts = ["jobkorea", "jobkorea", "jobkorea", "saramin"].map((platform, i) => {
     const publicId = String(701 + i), internalId = String(801 + i)
     return { id: crypto.randomUUID(), platform, tabId: 999900 + i, frameId: 0, sourceJobId: platform === "jobkorea" ? internalId : publicId,
@@ -1262,7 +1304,9 @@ test("지원 현황 대조: 가져온 네 건이 확인 필요 안내를 해소�
   await rpc(ui, { type: "restore", backup: { format: "todaystart", version: 1, exportedAt: new Date().toISOString(), records: [pending] } })
   await ui.evaluate(async attempts => chrome.storage.local.set({ submissionAttempts: attempts, revision: crypto.randomUUID() }), attempts)
   await ui.getByRole("button", { name: "지원 기록 관리", exact: true }).click()
-  await expect(ui.getByRole("region", { name: "지원 진행 상태", exact: true }).locator(".submission-item")).toHaveCount(4)
+  // Jobkorea's three click-only attempts are not warnings. The Saramin POST
+  // remains actionable; independently imported receipts can resolve all four.
+  await expect(ui.getByRole("region", { name: "지원 진행 상태", exact: true }).locator(".submission-item")).toHaveCount(1)
   const imported = attempts.map((attempt, i) => record({ platform: attempt.platform as "jobkorea" | "saramin", sourceJobId: attempt.context.sourceJobId, sourceApplicationId: String(9000 + i), companyName: attempt.context.companyName, jobTitle: "가져온 지원 현황의 공고 제목", jobUrl: attempt.context.jobUrl, appliedAt: "2026-10-28", collectedAt: "2026-10-28T01:05:00Z", lastSeenAt: "2026-10-28T01:05:00Z", lastSyncedAt: "2026-10-28T01:05:00Z" }))
   await rpc(ui, { type: "restore", backup: { format: "todaystart", version: 1, exportedAt: new Date().toISOString(), records: imported } })
   await expect(ui.getByRole("region", { name: "지원 진행 상태", exact: true })).toHaveCount(0)
@@ -1278,7 +1322,7 @@ test("지원 현황 대조: 가져온 네 건이 확인 필요 안내를 해소�
 test("직접 추가: 이전 백그라운드의 메타데이터 거절은 재시작 안내와 입력 유지 후 안전하게 재시도", async ({ ui }) => {
   const attemptId = crypto.randomUUID(), generation = crypto.randomUUID()
   await ui.evaluate(async ({ attemptId, generation }) => chrome.storage.local.set({ dataGeneration: generation, submissionAttempts: [
-    { id: attemptId, platform: "wanted", tabId: 999991, frameId: 0, sourceJobId: "6500", stage: "unverified", reason: "timeout", context: { sourceJobId: "6500", companyName: "업데이트 후 확인 기업", jobTitle: "웹 개발자", jobUrl: "https://www.wanted.co.kr/wd/6500" }, startedAt: "2026-10-28T01:00:00Z", updatedAt: "2026-10-28T01:00:00Z" }
+    { id: attemptId, platform: "wanted", tabId: 999991, frameId: 0, sourceJobId: "6500", stage: "unverified", reason: "timeout", clickedAt: "2026-10-28T01:00:00Z", context: { sourceJobId: "6500", companyName: "업데이트 후 확인 기업", jobTitle: "웹 개발자", jobUrl: "https://www.wanted.co.kr/wd/6500" }, startedAt: "2026-10-28T01:00:00Z", updatedAt: "2026-10-28T01:00:00Z" }
   ] }), { attemptId, generation })
   await ui.getByRole("button", { name: "지원 기록 관리", exact: true }).click()
   await ui.getByRole("region", { name: "지원 진행 상태", exact: true }).getByRole("button", { name: "직접 추가", exact: true }).click()
@@ -1324,22 +1368,24 @@ test("지원 진행 상태: 같은 공고의 안내를 묶고 한 번 확인하�
       { ...common, id: ids[0], tabId: 999991, context, stage: "unverified", reason: "navigation", requestId: crypto.randomUUID() },
       { ...common, id: ids[1], tabId: 999992, context, stage: "started", reason: "opened" },
       { ...common, id: ids[2], tabId: 999993, stage: "unverified", reason: "closed" },
-      { ...common, id: ids[3], tabId: 999994, context, stage: "unverified", reason: "timeout" },
-      { ...common, id: ids[4], tabId: 999995, platform: "saramin", sourceJobId: "200", stage: "unverified", reason: "timeout", context: { sourceJobId: "200", companyName: "가상 중복 기업", jobTitle: "디자이너", jobUrl: "https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=200" } }
+      { ...common, id: ids[3], tabId: 999994, context, stage: "unverified", reason: "timeout", requestId: crypto.randomUUID() },
+      { ...common, id: ids[4], tabId: 999995, platform: "saramin", sourceJobId: "200", stage: "unverified", reason: "timeout", requestId: crypto.randomUUID(), context: { sourceJobId: "200", companyName: "가상 중복 기업", jobTitle: "디자이너", jobUrl: "https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=200" } }
     ] })
   }, ids)
   await ui.getByRole("button", { name: "지원 기록 관리", exact: true }).click()
   const activity = ui.getByRole("region", { name: "지원 진행 상태", exact: true })
   const jobkorea = activity.locator(".submission-item").filter({ hasText: "잡코리아" })
   await expect(activity.locator(".submission-item")).toHaveCount(2)
-  await expect(jobkorea).toContainText("같은 공고 안내 4건")
+  await expect(jobkorea).toContainText("같은 공고 안내 2건")
   await expect(jobkorea.getByRole("button", { name: "완료 여부 확인", exact: true })).toHaveCount(1)
   await expect(jobkorea.getByRole("button", { name: "직접 추가", exact: true })).toHaveCount(0)
   await ui.screenshot({ path: "test-results/submission-grouped.png", fullPage: true })
   await jobkorea.getByRole("button", { name: "잡코리아 가상 중복 기업 진행 안내 닫기", exact: true }).click()
   await expect(jobkorea).toHaveCount(0)
   const dismissed = await ui.evaluate(() => chrome.storage.local.get("dismissedSubmissionAttempts"))
-  expect(dismissed.dismissedSubmissionAttempts).toEqual(expect.arrayContaining(ids.slice(0, 4)))
+  expect(dismissed.dismissedSubmissionAttempts).toEqual(expect.arrayContaining([ids[0], ids[3]]))
+  expect(dismissed.dismissedSubmissionAttempts).not.toContain(ids[1])
+  expect(dismissed.dismissedSubmissionAttempts).not.toContain(ids[2])
   expect(dismissed.dismissedSubmissionAttempts).not.toContain(ids[4])
   await ui.reload()
   await expect(activity.locator(".submission-item")).toHaveCount(1)
@@ -1363,7 +1409,7 @@ test("지원 진행 상태: 확인 필요에서 직접 추가할 때 정보를 �
   const id = crypto.randomUUID(), unknownId = crypto.randomUUID()
   await ui.evaluate(async ({ id, unknownId }) => chrome.storage.local.set({ submissionAttempts: [
     { id, platform: "wanted", tabId: 999991, frameId: 0, sourceJobId: "6500", stage: "unverified", reason: "timeout", context: { sourceJobId: "6500", companyName: "미리 채운 기업", jobTitle: "웹 개발자", jobUrl: "https://www.wanted.co.kr/wd/6500?token=private#apply" }, startedAt: "2026-10-20T14:55:00Z", clickedAt: "2026-10-20T15:05:00Z", updatedAt: "2026-10-21T01:00:00Z" },
-    { id: unknownId, platform: "jobkorea", tabId: 999992, frameId: 0, sourceJobId: "51797123", stage: "unverified", reason: "closed", startedAt: "2026-10-19T15:10:00Z", updatedAt: "2026-10-21T01:00:00Z" }
+    { id: unknownId, platform: "jobkorea", tabId: 999992, frameId: 0, sourceJobId: "51797123", stage: "unverified", reason: "closed", requestId: crypto.randomUUID(), startedAt: "2026-10-19T15:10:00Z", updatedAt: "2026-10-21T01:00:00Z" }
   ] }), { id, unknownId })
   await ui.getByRole("button", { name: "지원 기록 관리", exact: true }).click()
   const activity = ui.getByRole("region", { name: "지원 진행 상태", exact: true })
@@ -1826,7 +1872,7 @@ test("최신 지원순은 날짜와 제출 시각 기준이고 상태 불명은 
     record({ platform: "manual", sourceApplicationId: "review-3", companyName: "상태 확인 기업 3", status: "unknown", appliedAt: undefined, sourceCreatedAt: "2027-01-01T00:00:00+09:00" })
   ]
   await rpc(ui, { type: "restore", backup: { format: "todaystart", version: 1, exportedAt: new Date().toISOString(), records: unknown } })
-  await ui.evaluate(async () => chrome.storage.local.set({ submissionAttempts: [{ id: "00000000-0000-4000-8000-000000000021", platform: "wanted", tabId: 999999, frameId: 0, sourceJobId: "100", stage: "unverified", reason: "timeout", context: { sourceJobId: "100", companyName: "상태 확인 기업 2", jobTitle: "개발자", jobUrl: "https://www.wanted.co.kr/wd/100" }, startedAt: "2026-10-19T01:00:00Z", updatedAt: "2026-10-19T01:00:00Z" }] }))
+  await ui.evaluate(async () => chrome.storage.local.set({ submissionAttempts: [{ id: "00000000-0000-4000-8000-000000000021", platform: "wanted", tabId: 999999, frameId: 0, sourceJobId: "100", stage: "unverified", reason: "timeout", clickedAt: "2026-10-19T01:00:00Z", context: { sourceJobId: "100", companyName: "상태 확인 기업 2", jobTitle: "개발자", jobUrl: "https://www.wanted.co.kr/wd/100" }, startedAt: "2026-10-19T01:00:00Z", updatedAt: "2026-10-19T01:00:00Z" }] }))
   await expect(ui.getByRole("button", { name: "상태 확인 3", exact: true })).toBeVisible()
   await expect(ui.locator("tbody .company-cell strong").first()).toHaveText("C 기업")
   await expect(ui.locator("tbody .company-cell strong").last()).toHaveText("상태 확인 기업 3")

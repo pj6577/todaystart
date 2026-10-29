@@ -95,7 +95,15 @@ it("제출 없이 지원창을 닫아도 지원 기록을 만들지 않는다", 
   await metadata()
   await tracker.observe({ kind: "entered", platform: "saramin", sourceJobId: jobId }, sender())
   await tracker.closeTab(1)
-  expect((await tracker.snapshot())[0]?.stage).toBe("unverified")
+  expect((await tracker.snapshot())[0]).toMatchObject({ stage: "started", reason: "opened", closedAt: expect.any(String) })
+  expect(await repository.list()).toHaveLength(0)
+})
+it("잡코리아 지원창을 열어 확인한 뒤 닫아도 제출 실패로 승격하지 않는다", async () => {
+  const popup = await jobkoreaMetadata()
+  await tracker.observe({ kind: "entered", platform: "jobkorea", sourceJobId: "51797123" }, popup)
+  await tracker.closeTab(1)
+  tracker = new SubmissionTracker(repository)
+  expect((await tracker.snapshot())[0]).toMatchObject({ stage: "started", reason: "opened", closedAt: expect.any(String) })
   expect(await repository.list()).toHaveLength(0)
 })
 it("45초 만료와 탭 닫기는 unverified이며 완료가 아니다", async () => {

@@ -63,7 +63,9 @@ export class SubmissionTracker {
     const { attempts } = await this.store.read()
     for (const attempt of attempts) if (attempt.tabId === tabId && !attempt.closedAt) {
       attempt.closedAt = new Date().toISOString()
-      if (attempt.stage === "started" || attempt.stage === "submitting") {
+      // Closing a window that was only opened is ordinary browsing. Keep its
+      // context for a late completion signal without turning it into a failure.
+      if (attempt.stage === "submitting") {
         attempt.stage = "unverified"; attempt.reason = "closed"; attempt.updatedAt = attempt.closedAt
         await this.materialize(attempt)
       }
