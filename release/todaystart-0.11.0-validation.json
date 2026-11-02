@@ -1,0 +1,112 @@
+{
+  "file": "release/todaystart-0.11.0.zip",
+  "version": "0.11.0",
+  "sourceCommit": "ad6d80b81ab540171d2fab4912dcd59f779460ee",
+  "bytes": 2777549,
+  "files": 46,
+  "sha256": "fca90443de9661de78b44664175483d672078774e62c73e6a26374aed60f22e8",
+  "archiveIntegrity": "passed",
+  "buildBytesMatch": true,
+  "manifestResourcesPresent": true,
+  "permissionsUnchanged": true,
+  "permissionsComparedWith": "0.10.3",
+  "contentAndBackgroundComparedWith0_10_3": {
+    "static/background/index.js": true,
+    "submission-bridge.fba59b30.js": true,
+    "jobs.a479fee3.js": true,
+    "wanted-submission.6e6a7328.js": true,
+    "main.ad03b8e0.js": true
+  },
+  "mainWorldObserverRegistered": true,
+  "licensesIncluded": true,
+  "excludedHistoricalAssets": true,
+  "secretPatternMatches": [],
+  "sourcePatternAudit": {
+    "trackedTextFiles": 332,
+    "matches": []
+  },
+  "validation": {
+    "typecheck": "passed",
+    "unitTestFiles": 45,
+    "unitTests": 564,
+    "searchBrowserTests": 18,
+    "managementBrowserTests": 17,
+    "build": "passed",
+    "landingBuild": "passed",
+    "fullBrowserSuite": "not claimed; earlier collection timing/state E2E failures remain outside this release fix scope"
+  },
+  "liveCareerHttp": [
+    {
+      "platform": "saramin",
+      "preset": "junior",
+      "status": 200,
+      "cards": 20,
+      "params": {
+        "searchword": "",
+        "cat_kewd": "92",
+        "exp_cd": "1,2",
+        "exp_max": "3",
+        "recruitPage": "1",
+        "recruitPageCount": "20"
+      },
+      "serverParams": {
+        "exp_cd": "1,2",
+        "exp_max": "3"
+      }
+    },
+    {
+      "platform": "saramin",
+      "preset": "range",
+      "status": 200,
+      "cards": 20,
+      "params": {
+        "searchword": "",
+        "cat_kewd": "92",
+        "exp_cd": "2",
+        "exp_max": "5",
+        "recruitPage": "1",
+        "recruitPageCount": "20",
+        "exp_min": "2"
+      },
+      "serverParams": {
+        "exp_cd": "2",
+        "exp_max": "5",
+        "exp_min": "2"
+      }
+    },
+    {
+      "platform": "jobkorea",
+      "preset": "junior",
+      "status": 200,
+      "cards": 25,
+      "params": {
+        "stext": "",
+        "tabType": "recruit",
+        "duty": "1000230",
+        "careerType": "1,2",
+        "careerMax": "3",
+        "Page_No": "1",
+        "careerMin": "0"
+      }
+    },
+    {
+      "platform": "jobkorea",
+      "preset": "range",
+      "status": 200,
+      "cards": 25,
+      "params": {
+        "stext": "",
+        "tabType": "recruit",
+        "duty": "1000230",
+        "careerType": "2",
+        "careerMax": "5",
+        "Page_No": "1",
+        "careerMin": "2"
+      }
+    }
+  ],
+  "limitations": [
+    "Wanted structured conditions remain unimplemented; keyword only",
+    "Live site access and structure can differ from synthetic/browser/HTTP validation"
+  ]
+}
