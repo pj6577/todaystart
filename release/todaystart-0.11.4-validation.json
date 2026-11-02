@@ -1,0 +1,33 @@
+{
+  "file": "release/todaystart-0.11.4.zip",
+  "version": "0.11.4",
+  "sourceCommit": "d4dfb5fc9835dc6bb422b8f7a67ea7d4c020f43b",
+  "bytes": 2782804,
+  "files": 46,
+  "sha256": "49fcd29f686778807b3fc1d42876a6a6f33c2fd4ab8f1144caeb08ef48ca0772",
+  "archiveIntegrity": "passed",
+  "buildBytesMatch": true,
+  "manifestResourcesPresent": true,
+  "permissionsUnchanged": true,
+  "permissionsComparedWith": "0.11.3",
+  "contentRegistrationsUnchanged": true,
+  "licensesIncluded": true,
+  "excludedHistoricalAssets": true,
+  "secretPatternMatches": [],
+  "sourcePatternAudit": {
+    "trackedTextFiles": 357,
+    "matches": []
+  },
+  "validation": {
+    "typecheck": "passed",
+    "build": "passed",
+    "unitTests": 626,
+    "failedUnitTests": 0,
+    "browserTests": "not run at user request; user will review the screen",
+    "bookmarkValidation": "Storage and DOM tests passed; live site requests not rerun"
+  },
+  "limitations": [
+    "Bookmarks are local to the browser and are not included in the existing JSON backup",
+    "No live browser or pixel layout checks were run at user request"
+  ]
+}
