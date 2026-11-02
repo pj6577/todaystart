@@ -83,8 +83,8 @@ export function JobSearch({ records }: { records: ApplicationRecord[] }) {
       {validation && <p role="alert" className="job-search-error">{validation}</p>}
     </form>
     <div className="job-search-sticky-controls">
-      <JobSearchFilters value={conditions} onChange={filters => applyFilters(filters, selected)} sites={selected} onApply={applyFilters} />
-      <div className="job-search-controls"><label className="job-search-exclude"><Input type="checkbox" checked={excludeApplied} onChange={event => changeExcludeApplied(event.target.checked)} />지원 기업 제외하기</label></div>
+      <JobSearchFilters value={conditions} onChange={filters => applyFilters(filters, selected)} sites={selected} onApply={applyFilters}
+        endControl={<label className="job-search-exclude"><Input type="checkbox" checked={excludeApplied} onChange={event => changeExcludeApplied(event.target.checked)} />지원 기업 제외하기</label>} />
     </div>
 
     {!!sites.length && <>
