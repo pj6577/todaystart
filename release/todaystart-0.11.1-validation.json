@@ -1,0 +1,115 @@
+{
+  "file": "release/todaystart-0.11.1.zip",
+  "version": "0.11.1",
+  "sourceCommit": "9d7ce09e9e1a8930090028177200dd194730baef",
+  "bytes": 2778042,
+  "files": 46,
+  "sha256": "909683d1e5d145094adb0f5a39e32405a8a9ba0cb97b554b0e19f4531e0f7a30",
+  "archiveIntegrity": "passed",
+  "buildBytesMatch": true,
+  "manifestResourcesPresent": true,
+  "permissionsUnchanged": true,
+  "permissionsComparedWith": "0.11.0",
+  "contentAndBackgroundComparedWith0_11_0": {
+    "static/background/index.js": true,
+    "jobs.a479fee3.js": true,
+    "submission-bridge.fba59b30.js": true,
+    "wanted-submission.6e6a7328.js": true,
+    "main.ad03b8e0.js": true
+  },
+  "licensesIncluded": true,
+  "excludedHistoricalAssets": true,
+  "secretPatternMatches": [],
+  "sourcePatternAudit": {
+    "trackedTextFiles": 337,
+    "matches": []
+  },
+  "filterUiReview": [
+    {
+      "width": 1440,
+      "labels": [
+        "\uc9c1\uad70\u00b7\uc9c1\ubb34",
+        "\uc9c0\uc5ed",
+        "\uacbd\ub825",
+        "\uac80\uc0c9 \uc0ac\uc774\ud2b8"
+      ],
+      "boxes": [
+        {
+          "x": 256,
+          "y": 250.59375,
+          "width": 92.703125,
+          "height": 38
+        },
+        {
+          "x": 356.703125,
+          "y": 250.59375,
+          "width": 68.75,
+          "height": 38
+        },
+        {
+          "x": 433.453125,
+          "y": 250.59375,
+          "width": 68.75,
+          "height": 38
+        },
+        {
+          "x": 510.203125,
+          "y": 250.59375,
+          "width": 102.75,
+          "height": 38
+        }
+      ],
+      "removedCopy": true,
+      "noOverflow": true
+    },
+    {
+      "width": 390,
+      "labels": [
+        "\uc9c1\uad70\u00b7\uc9c1\ubb34",
+        "\uc9c0\uc5ed",
+        "\uacbd\ub825",
+        "\uac80\uc0c9 \uc0ac\uc774\ud2b8"
+      ],
+      "boxes": [
+        {
+          "x": 16,
+          "y": 407.09375,
+          "width": 83.703125,
+          "height": 38
+        },
+        {
+          "x": 107.703125,
+          "y": 407.09375,
+          "width": 59.75,
+          "height": 38
+        },
+        {
+          "x": 175.453125,
+          "y": 407.09375,
+          "width": 59.75,
+          "height": 38
+        },
+        {
+          "x": 243.203125,
+          "y": 407.09375,
+          "width": 93.75,
+          "height": 38
+        }
+      ],
+      "removedCopy": true,
+      "noOverflow": true
+    }
+  ],
+  "validation": {
+    "typecheck": "passed",
+    "unitTestFiles": 46,
+    "unitTests": 582,
+    "searchBrowserTests": 22,
+    "build": "passed",
+    "fullBrowserSuite": "not claimed; earlier collection timing/state E2E failures remain outside this release fix scope"
+  },
+  "limitations": [
+    "Wanted structured conditions remain unimplemented; keyword only",
+    "Live site access and structure can differ from synthetic browser validation"
+  ]
+}
