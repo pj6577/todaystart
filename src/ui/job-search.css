@@ -1,9 +1,9 @@
-.job-search-demo { width:100%; min-width:0; }
+.job-search-demo { --job-search-control-height:38px; width:100%; min-width:0; }
 .job-search-form { padding:0; margin:0; }
 .job-search-sticky-controls { position:sticky; top:0; z-index:25; margin-top:10px; padding:12px 0; background:var(--bg); border-bottom:1px solid var(--border); }
 .job-search-condition-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; }
 .job-search-condition-grid { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
-.search-filter-trigger.ui-button { min-height:38px; gap:8px; padding:8px 13px; border-radius:9px; border-color:transparent; background:var(--surface-hover); color:var(--text-secondary); }
+.search-filter-trigger.ui-button { height:var(--job-search-control-height); min-height:var(--job-search-control-height); gap:8px; padding:8px 13px; border-radius:9px; border-color:transparent; background:var(--surface-hover); color:var(--text-secondary); }
 .search-filter-trigger.ui-button:hover { background:color-mix(in srgb,var(--surface-hover) 90%,var(--text) 10%); border-color:var(--border-strong); color:var(--text); }
 .search-filter-trigger.ui-button.is-active { background:var(--surface-hover); border-color:var(--border-strong); color:var(--text); }
 .search-filter-trigger.ui-button.is-active:hover { background:color-mix(in srgb,var(--surface-hover) 90%,var(--text) 10%); }
@@ -18,15 +18,28 @@
 .job-search-exclude { display:flex; align-items:center; gap:8px; min-height:38px; margin:0 0 0 auto; padding:0; cursor:pointer; font-size:12px; line-height:20px; white-space:nowrap; color:var(--text-secondary); }
 .job-search-exclude input[type="checkbox"] { flex:none; display:block; width:16px; height:16px; margin:0; padding:0; accent-color:var(--accent); }
 .job-search-error { margin-top: 10px; color: var(--danger); font-size: 12px; }
-.job-search-results-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:24px 0 18px; }
-.job-search-filters { display:flex; flex-wrap:wrap; gap:4px; padding:4px; border:1px solid var(--border); border-radius:10px; background:var(--surface); }
-.job-search-filters .ui-button { gap:6px; border:0; border-radius:6px; padding:7px 11px; color:var(--text-muted); background:transparent; }
+.job-search-results-toolbar { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin:24px 0 18px; }
+.job-search-result-views { display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px; min-height:var(--job-search-control-height); }
+.job-search-bookmarks-view.ui-button { height:var(--job-search-control-height); min-height:var(--job-search-control-height); padding-block:0; border-radius:10px; flex:none; }
+.job-search-bookmarks-view svg { fill:currentColor; flex:none; }
+.job-search-bookmarks-view[aria-pressed="true"] { background:var(--selected); border-color:var(--text-muted); }
+.job-search-bookmarks-view > span { font-variant-numeric:tabular-nums; color:var(--text-muted); }
+.job-search-filters { display:flex; flex-wrap:wrap; gap:4px; min-height:var(--job-search-control-height); padding:4px; border:1px solid var(--border); border-radius:10px; background:var(--surface); }
+.job-search-filters .ui-button[data-slot="button"] { height:calc(var(--job-search-control-height) - 10px); min-height:calc(var(--job-search-control-height) - 10px); gap:6px; border:0; border-radius:6px; padding:0 11px; color:var(--text-muted); background:transparent; }
 .job-search-filters .ui-button[aria-pressed="true"] { background:var(--selected); color:var(--text); }
 .job-search-filters .platform-symbol { width:16px; height:16px; }
 .job-search-results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .job-search-card { display: flex; flex-direction: column; min-width: 0; min-height: 210px; padding: 22px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .job-search-card:hover { border-color: var(--border-strong); }
-.job-search-card-source { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-muted); margin-bottom: 22px; }
+.job-search-card-source { display: flex; flex-wrap:wrap; align-items: center; gap: 6px; font-size: 10px; color: var(--text-muted); margin-bottom: 22px; }
+.job-search-card-actions { display:inline-flex; align-items:center; gap:8px; margin-left:auto; flex:none; }
+/* Align the drawn bookmark with the card inset, retaining its 30px hit area. */
+.job-search-bookmark { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; margin-right:-10px; padding:0; flex:none; border:1px solid transparent; border-radius:6px; color:var(--text-muted); background:transparent; cursor:pointer; }
+.job-search-bookmark:hover { color:var(--text); background:var(--surface-hover); }
+.job-search-bookmark[aria-pressed="true"] { color:var(--text); background:var(--selected); }
+.job-search-bookmark[aria-pressed="true"] svg { fill:currentColor; }
+.job-search-bookmark:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+.job-search-bookmark:disabled { opacity:.5; cursor:wait; }
 .job-search-company { font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; }
 .job-search-card h3 { font-size: 16px; line-height: 1.6; overflow-wrap: anywhere; }
 .job-search-card h3 a:hover { color: var(--link); }
@@ -38,7 +51,7 @@
 .job-search-failures { display:flex; flex-wrap:wrap; gap:8px 20px; margin:0 0 16px; }
 .job-search-failure { display:flex; align-items:center; gap:12px; color:var(--text-muted); font-size:11px; }
 .job-search-failure .ui-button { font-size:11px; color:var(--link); }
-.job-search-applied-badge { margin-left:auto; display:inline-flex; align-items:center; gap:4px; min-height:26px; border:1px solid transparent; color:var(--applied-badge-text); background:var(--applied-badge-bg); border-radius:5px; padding:4px 7px; cursor:pointer; }
+.job-search-applied-badge { display:inline-flex; align-items:center; gap:4px; height:30px; min-height:30px; border:1px solid transparent; color:var(--applied-badge-text); background:var(--applied-badge-bg); border-radius:5px; padding:4px 7px; cursor:pointer; white-space:nowrap; }
 .job-search-applied-badge:hover { border-color:var(--text-muted); }
 .job-search-applied-badge:focus-visible { outline:2px solid var(--focus); }
 .ui-dialog-content.job-search-history-dialog { display:flex; flex-direction:column; width:min(600px,calc(100% - 32px)); max-height:min(720px,calc(100dvh - 48px)); padding:0; overflow:hidden; border-radius:14px; }

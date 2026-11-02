@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { rpc } from "../messaging/protocol"
 import type { Snapshot } from "../messaging/contracts"
 import { draftsChanged, readPlannerDrafts, syncDraftGeneration, type PlannerDraft } from "./planner-drafts"
+import { syncSearchBookmarkGeneration } from "../search/bookmarks"
 
 export function useWorkspaceData(onGenerationChange: () => void, onError: (message: string) => void) {
   const [snapshot, setSnapshot] = useState<Snapshot>()
@@ -15,6 +16,7 @@ export function useWorkspaceData(onGenerationChange: () => void, onError: (messa
     if (draftGeneration.current !== next.dataGeneration) callbacks.current.onGenerationChange()
     draftGeneration.current = next.dataGeneration
     syncDraftGeneration(next.dataGeneration)
+    try { syncSearchBookmarkGeneration(next.dataGeneration) } catch { /* Search reports bookmark storage failures when saving. */ }
     setDrafts(readPlannerDrafts(next.dataGeneration)); setSnapshot(next)
   }
   async function loadPlanner() {

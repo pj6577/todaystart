@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { platformLabel, type ApplicationRecord } from "../core/model"
 import { applicationHistoryIndex, searchCompanyNameKey } from "../search/application-history"
-import { searchLimits, type SearchPlatform } from "../search/model"
+import { searchLimits, searchPlatforms, type SearchPlatform } from "../search/model"
 import { hasSearchFilters, type SearchFilters } from "../search/filters"
 import { readSearchPreferences, saveSearchPreferences, type SearchPreferences } from "../search/preferences"
 import { Icon } from "./components"
@@ -12,11 +12,12 @@ import { Card } from "./primitives/card"
 import { JobSearchFilters } from "./job-search-filters"
 import { JobSearchHistoryDialog } from "./job-search-history-dialog"
 import { useJobSearch } from "./use-job-search"
+import { useSearchBookmarks } from "./use-search-bookmarks"
 import "./job-search.css"
 
 const failureLabels = { unreadable: "응답 확인 필요", blocked: "접근 제한", login_required: "로그인 필요", timeout: "응답 지연", error: "요청 실패" }
 
-export function JobSearch({ records }: { records: ApplicationRecord[] }) {
+export function JobSearch({ records, generation }: { records: ApplicationRecord[]; generation?: string }) {
   const [initial] = useState(readSearchPreferences)
   const confirmed = useRef(initial)
   const [query, setQuery] = useState(initial.query)
@@ -27,14 +28,19 @@ export function JobSearch({ records }: { records: ApplicationRecord[] }) {
   const [excludeApplied, setExcludeApplied] = useState(initial.excludeApplied)
   const [nearEnd, setNearEnd] = useState(false)
   const [historyCompany, setHistoryCompany] = useState<{ name: string; key: string }>()
+  const [showBookmarks, setShowBookmarks] = useState(false)
+  const { bookmarks, toggle: toggleBookmark, error: bookmarkError, ready: bookmarksReady } = useSearchBookmarks(generation)
+  const bookmarkedIds = useMemo(() => new Set(bookmarks.map(bookmark => bookmark.job.id)), [bookmarks])
   const sentinel = useRef<HTMLDivElement>(null)
   const lastAutoLoad = useRef("")
   const emptyAutoLoads = useRef(0)
   const { sites, feed, paused, search, stop, clear, retry, loadMore, moreSites, busy } = useJobSearch()
   const history = useMemo(() => applicationHistoryIndex(records), [records])
-  const availableJobs = useMemo(() => excludeApplied ? feed.filter(job => !history.has(searchCompanyNameKey(job.companyName))) : feed, [feed, history, excludeApplied])
+  const sourceJobs = useMemo(() => showBookmarks ? bookmarks.map(bookmark => bookmark.job) : feed, [showBookmarks, bookmarks, feed])
+  const availableJobs = useMemo(() => excludeApplied ? sourceJobs.filter(job => !history.has(searchCompanyNameKey(job.companyName))) : sourceJobs, [sourceJobs, history, excludeApplied])
   const jobs = useMemo(() => availableJobs.filter(job => filter === "all" || job.platform === filter), [availableJobs, filter])
-  const hasMore = moreSites.some(site => filter === "all" || site.platform === filter)
+  const hasMore = !showBookmarks && moreSites.some(site => filter === "all" || site.platform === filter)
+  const visibleSites = showBookmarks ? searchPlatforms.filter(platform => sourceJobs.some(job => job.platform === platform)) : sites.map(site => site.platform)
   const failures = sites.filter(site => site.status in failureLabels)
 
   useEffect(() => {
@@ -52,12 +58,12 @@ export function JobSearch({ records }: { records: ApplicationRecord[] }) {
     // A comparison batch without matches is still progress, not a zero-result
     // search. Continue a few batches; keep a manual continuation after the cap.
     const canContinue = matching ? emptyAutoLoads.current < 3 && (!excludeApplied || feed.length === 0) : jobs.length > 0
-    if (nearEnd && bounds && bounds.top <= window.innerHeight + 240 && bounds.bottom >= 0 && !busy && !paused && hasMore && canContinue && lastAutoLoad.current !== progress) {
+    if (!showBookmarks && nearEnd && bounds && bounds.top <= window.innerHeight + 240 && bounds.bottom >= 0 && !busy && !paused && hasMore && canContinue && lastAutoLoad.current !== progress) {
       lastAutoLoad.current = progress
       emptyAutoLoads.current = matching ? emptyAutoLoads.current + 1 : 0
       loadMore(filter)
     }
-  }, [nearEnd, busy, paused, hasMore, loadMore, filter, excludeApplied, jobs.length, sites, feed.length])
+  }, [showBookmarks, nearEnd, busy, paused, hasMore, loadMore, filter, excludeApplied, jobs.length, sites, feed.length])
 
   function remember(filters: SearchFilters, platforms: SearchPlatform[], keyword = query.trim()) {
     const preferences: SearchPreferences = { query: keyword, filters, sites: platforms, excludeApplied }
@@ -68,7 +74,7 @@ export function JobSearch({ records }: { records: ApplicationRecord[] }) {
     const keyword = query.trim()
     if ((!keyword && !hasSearchFilters(filters)) || keyword.length > searchLimits.queryLength || !platforms.length) { setValidation("검색어 또는 검색 조건과 검색할 사이트를 선택해 주세요."); return }
     remember(filters, platforms, keyword)
-    setFilter("all"); setValidation(""); lastAutoLoad.current = ""; emptyAutoLoads.current = 0
+    setShowBookmarks(false); setFilter("all"); setValidation(""); lastAutoLoad.current = ""; emptyAutoLoads.current = 0
     search({ query: keyword, filters: { ...filters } }, platforms)
   }
   function applyFilters(filters: SearchFilters, platforms: SearchPlatform[]) {
@@ -93,26 +99,29 @@ export function JobSearch({ records }: { records: ApplicationRecord[] }) {
         endControl={<label className="job-search-exclude"><Input type="checkbox" checked={excludeApplied} onChange={event => changeExcludeApplied(event.target.checked)} />지원 기업 제외하기</label>} />
     </div>
 
-    {!!sites.length && <>
       <div className="job-search-results-toolbar">
-      <nav className="job-search-filters" aria-label="검색 결과 사이트 필터">{(["all", ...sites.map(site => site.platform)] as const).map(platform => {
+      <div className="job-search-result-views">
+      <Button variant="outline" className="job-search-bookmarks-view" aria-pressed={showBookmarks} onClick={() => { if (busy) stop(); setShowBookmarks(!showBookmarks); setFilter("all") }}><Icon name="bookmark" size={16} />북마크 <span>{bookmarks.length}</span></Button>
+      {(!!sites.length || showBookmarks) && <nav className="job-search-filters" aria-label="검색 결과 사이트 필터">{(["all", ...visibleSites] as const).map(platform => {
         const count = platform === "all" ? availableJobs.length : availableJobs.filter(job => job.platform === platform).length
-        return <Button variant="outline" key={platform} data-search-platform={platform} data-search-status={platform === "all" ? undefined : sites.find(site => site.platform === platform)!.status} data-result-count={count} aria-pressed={filter === platform} onClick={() => setFilter(platform)}>{platform !== "all" && <PlatformSymbol platform={platform} />}{platform === "all" ? "전체" : platformLabel[platform]}</Button>
-      })}</nav>
+        return <Button variant="outline" key={platform} data-search-platform={platform} data-search-status={platform === "all" || showBookmarks ? undefined : sites.find(site => site.platform === platform)?.status} data-result-count={count} aria-pressed={filter === platform} onClick={() => setFilter(platform)}>{platform !== "all" && <PlatformSymbol platform={platform} />}{platform === "all" ? "전체" : platformLabel[platform]}</Button>
+      })}</nav>}
+      </div>
       {busy && <Button variant="ghost" onClick={stop}><Icon name="close" size={14} />검색 중지</Button>}</div>
-      {!!failures.length && <div className="job-search-failures">{failures.map(site => <div className="job-search-failure" key={site.platform} role="status" aria-label={`${platformLabel[site.platform]} 검색 문제`} title={site.message}><span>{platformLabel[site.platform]} · {failureLabels[site.status as keyof typeof failureLabels]}</span><Button variant="link" size="sm" disabled={busy} onClick={() => retry(site)}>다시 시도</Button></div>)}</div>}
-    </>}
+      {bookmarkError && <p role="alert" className="job-search-error">{bookmarkError}</p>}
+      {!showBookmarks && !!failures.length && <div className="job-search-failures">{failures.map(site => <div className="job-search-failure" key={site.platform} role="status" aria-label={`${platformLabel[site.platform]} 검색 문제`} title={site.message}><span>{platformLabel[site.platform]} · {failureLabels[site.status as keyof typeof failureLabels]}</span><Button variant="link" size="sm" disabled={busy} onClick={() => retry(site)}>다시 시도</Button></div>)}</div>}
 
     {jobs.length ? <div className="job-search-results">{jobs.map(job => {
       const matches = history.get(searchCompanyNameKey(job.companyName)) || [], latest = matches[0]
+      const saved = bookmarkedIds.has(job.id)
       return <Card asChild key={job.id}><article className={`job-search-card${latest ? " has-application" : ""}`}>
-        <div className="job-search-card-source"><PlatformSymbol platform={job.platform} /><span>{platformLabel[job.platform]}</span>{latest && <Button variant="unstyled" className="job-search-applied-badge" aria-haspopup="dialog" aria-description={`이전 지원 ${matches.length}건 확인`} title={`이전 지원 ${matches.length}건 확인`} onClick={() => setHistoryCompany({ name: job.companyName, key: searchCompanyNameKey(job.companyName) })}><Icon name="check" size={12} />지원 이력 있음</Button>}</div>
+        <div className="job-search-card-source"><PlatformSymbol platform={job.platform} /><span>{platformLabel[job.platform]}</span><div className="job-search-card-actions">{latest && <Button variant="unstyled" className="job-search-applied-badge" aria-haspopup="dialog" aria-description={`이전 지원 ${matches.length}건 확인`} title={`이전 지원 ${matches.length}건 확인`} onClick={() => setHistoryCompany({ name: job.companyName, key: searchCompanyNameKey(job.companyName) })}><Icon name="check" size={12} />지원 이력 있음</Button>}<Button variant="unstyled" className="job-search-bookmark" aria-label={`${job.companyName} ${job.jobTitle} 북마크`} aria-pressed={saved} title={saved ? "북마크 해제" : "북마크 저장"} disabled={!bookmarksReady} onClick={() => toggleBookmark(job)}><Icon name="bookmark" size={17} /></Button></div></div>
         <p className="job-search-company">{job.companyName}</p><h3><a href={job.jobUrl} target="_blank" rel="noreferrer">{job.jobTitle}<Icon name="external" size={14} /></a></h3>
         <div className="job-search-card-meta">{job.location && <span>{job.location}</span>}{job.career && <span>{job.career}</span>}{job.deadline && <span>{job.deadline}</span>}</div>
       </article></Card>
-    })}</div> : <div className="job-search-empty"><div className="empty-symbol"><Icon name="search" size={28} /></div><h2>{!sites.length ? "어떤 기회를 찾고 있나요?" : busy ? "공고를 찾고 있어요" : excludeApplied && feed.length ? "지원 이력이 없는 기업의 공고가 없어요" : hasMore ? "조건에 맞는 공고를 더 확인할 수 있어요" : "검색 결과가 없어요"}</h2>{!sites.length && <p>직군과 지역을 고르거나, 검색어로 공고를 찾아보세요.</p>}</div>}
+    })}</div> : <div className="job-search-empty"><div className="empty-symbol"><Icon name={showBookmarks ? "bookmark" : "search"} size={28} /></div><h2>{showBookmarks && !bookmarks.length ? "북마크한 공고가 없어요" : !showBookmarks && !sites.length ? "어떤 기회를 찾고 있나요?" : !showBookmarks && busy ? "공고를 찾고 있어요" : excludeApplied && sourceJobs.length ? "지원 이력이 없는 기업의 공고가 없어요" : hasMore ? "조건에 맞는 공고를 더 확인할 수 있어요" : "검색 결과가 없어요"}</h2>{showBookmarks && !bookmarks.length ? <p>공고 카드의 북마크 아이콘을 눌러 저장해 보세요.</p> : !sites.length && !showBookmarks && <p>직군과 지역을 고르거나, 검색어로 공고를 찾아보세요.</p>}</div>}
 
-    <div className="job-search-scroll-end" ref={sentinel} hidden={!sites.length}>
+    <div className="job-search-scroll-end" ref={sentinel} hidden={!sites.length || showBookmarks}>
       <p role="status" aria-live="polite">{busy ? "공고를 가져오는 중…" : paused ? "검색을 중지했어요" : !hasMore && jobs.length ? "현재 검색 결과의 끝이에요" : ""}</p>
       {hasMore && <Button variant="outline" disabled={busy} onClick={() => loadMore(filter)}>{paused ? "검색 계속하기" : "다음 공고 가져오기"}</Button>}
     </div>

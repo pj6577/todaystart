@@ -80,7 +80,7 @@ export function SettingsPage({ settings, busy, ready, action, onSettingsChange, 
           <div className="file-actions"><Button variant="outline"  disabled={busy} onClick={() => void action(async () => { const backup = await rpc({ type: "backup" }); download("오늘시작-백업.json", JSON.stringify(backup, null, 2), "application/json") })}><Icon name="download" size={15} />JSON 백업</Button><Button variant="outline"  disabled={busy} onClick={() => onBackupImport()}>JSON 복원</Button></div>
         </section>
         <section className="settings-section reset-data-section">
-          <div className="settings-section-heading"><h2>데이터 초기화</h2><p>저장한 지원 기록·메모·일정과 가져오기 상태를 지웁니다. 화면 모드와 수집 설정은 유지됩니다.</p></div>
+          <div className="settings-section-heading"><h2>데이터 초기화</h2><p>저장한 지원 기록·메모·일정·북마크와 가져오기 상태를 지웁니다. 화면 모드와 수집 설정은 유지됩니다.</p></div>
           <Button variant="destructive"  disabled={busy || !ready} onClick={onReset}>데이터 초기화</Button>
         </section>
         <div className="settings-app-info"><span>오늘시작</span><span>버전 {chrome.runtime.getManifest().version}</span></div>

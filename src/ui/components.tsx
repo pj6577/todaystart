@@ -3,7 +3,7 @@ import { sourceLabel, type ApplicationSource } from "../core/model"
 import { sentenceLines } from "./sentences"
 import appIcon from "url:../../assets/icon.png"
 
-export function Icon({ name, size = 20 }: { name: "grid" | "list" | "calendar" | "note" | "settings" | "arrow" | "search" | "download" | "refresh" | "check" | "shield" | "close" | "more" | "external" | "clock" | "sun" | "moon" | "monitor"; size?: number }) {
+export function Icon({ name, size = 20 }: { name: "grid" | "list" | "calendar" | "note" | "settings" | "arrow" | "search" | "download" | "refresh" | "check" | "shield" | "close" | "more" | "external" | "clock" | "sun" | "moon" | "monitor" | "bookmark"; size?: number }) {
   const paths = {
     grid: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
     list: "M8 5h13M8 12h13M8 19h13M3 5h.01M3 12h.01M3 19h.01",
@@ -17,7 +17,8 @@ export function Icon({ name, size = 20 }: { name: "grid" | "list" | "calendar" |
     clock: "M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0",
     sun: "M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0",
     moon: "M20 15A9 9 0 0 1 9 3a9 9 0 1 0 11 12",
-    monitor: "M3 4h18v13H3zM12 17v4m-5 0h10"
+    monitor: "M3 4h18v13H3zM12 17v4m-5 0h10",
+    bookmark: "M6 3h12v18l-6-4-6 4z"
   }
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]} /></svg>
 }
