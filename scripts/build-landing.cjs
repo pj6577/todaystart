@@ -13,8 +13,8 @@ function cssVariables(file, selector) {
   )
 }
 const appColors = {
-  ...cssVariables("src/style.css", ":root"),
-  ...cssVariables("src/style.css", ':root[data-theme="dark"]')
+  ...cssVariables("src/styles/theme.css", ":root"),
+  ...cssVariables("src/styles/theme.css", ':root[data-theme="dark"]')
 }
 const pageColors = cssVariables("landing/styles.css", ':root[data-theme="dark"]')
 for (const [page, app] of Object.entries({

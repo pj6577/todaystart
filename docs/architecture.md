@@ -186,6 +186,14 @@ fragment 또는 쿼리 순서만 다른 링크는 새 페이지로 인정하지 
 | 명시적 취소 | 취소 상태 표시 | 지원 취소와 UI 삭제를 구분 |
 | 오프라인 | 현재 열린 DOM과 로컬 이력 사용 | 네트워크 요청 없음 |
 
+## 공통 UI와 통합검색
+
+React 18·Tailwind 3을 유지하고 `src/ui/primitives`에 shadcn 기반 컴포넌트를 둡니다. 버튼 변형은 CVA로 정의하고 입력·기존 편집 폼의 선택창은 native 요소와 ref·이벤트를 유지합니다. 검색 조건은 `SearchFilterModal`의 통합 Radix Dialog 안에서 직군 탐색용 radio와 실제 복수 선택용 checkbox를 구분합니다. 왼쪽 탭에서 직무·지역·경력·사이트를 전환하고, 모든 임시 선택을 한 번의 적용으로 확정합니다. 조건은 불변 배열로 관리하며 `search/filters.ts`가 전체 직군·세부 직무의 중복 범위를 정리하고 검증합니다. `search/sources.ts`가 여러 선택을 네이티브 CSV 파라미터로 변환하므로 조합별 추가 요청은 하지 않습니다. 데스크톱과 모바일이 같은 상태·포커스·취소 로직을 공유합니다. 사용하지 않는 개별 검색 Popover와 cmdk는 제거했습니다. 모달·편집 패널은 Radix Dialog, 설정 스위치는 Radix Switch를 사용합니다. 화면 너비는 shell의 공통 변수로 통일하며 대시보드의 색상 변수와 시스템·라이트·다크 모드를 그대로 공유합니다.
+
+`src/style.css`는 스타일 진입점이며, `src/styles`에서 테마·공통 요소·화면별 스타일과 반응형 규칙을 나눕니다. 공통 컨트롤 스타일은 `ui/primitives/primitives.css`에, 캘린더·메모·검색 고유 레이아웃은 해당 화면 CSS에 둡니다. 새 화면에서는 직접 `.btn` 스타일을 추가하지 않고 `Button`의 `variant`를 선택합니다. 도메인 전용 클릭 영역은 `unstyled`를 사용합니다. 이 UI 의존성은 사이트에 삽입되는 content script로 가져오지 않습니다.
+
+검색 요청과 취소·페이지 진행은 `useJobSearch`, 요청·파싱은 `src/search`, 화면과 IntersectionObserver는 `JobSearch`에서 관리합니다. 다음 결과는 스크롤에 따라 추가하며 이미 보이는 카드 순서를 유지합니다. 지원 기업 색인은 완료된 로컬 기록만 사용하고 검색 사이트에 전송하지 않습니다.
+
 ## 배포 산출물과 남은 검증
 
 `build/chrome-mv3-prod`가 Chrome 설치용 디렉터리입니다. `npm run package`가 Web Store 업로드용 ZIP을 만듭니다. 개인정보 보호정책 초안은 `docs/privacy-policy.md`에 있습니다. 실제 DOM 검증, 정책 초안의 운영자 정보 확정, 스토어 설명·스크린샷·개인정보 공개 항목과 심사는 실제 배포 전에 남아 있습니다.

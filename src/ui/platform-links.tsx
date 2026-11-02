@@ -1,3 +1,4 @@
+import { Button } from "./primitives/button"
 import React, { useState } from "react"
 import type { Platform } from "../core/model"
 import { platformLabel } from "../core/model"
@@ -30,9 +31,9 @@ export function HistoryTask({ platform, count = 0, enabled = true, completed = f
   const { starting, error, start } = useHistoryImport({ platform, enabled, busy, allowModifiedNavigation: !compact })
   if (compact) return <div className="history-import">
     <div className="history-import-row"><span className="source-label"><PlatformSymbol platform={platform} />{platformLabel[platform]}</span>
-      <button type="button" className="btn history-import-button" disabled={starting || busy} aria-label={`${platformLabel[platform]} ${enabled ? "지원 기록 가져오기" : "수집 설정 열기"}`} aria-busy={starting || collecting} onClick={event => void start(event)}>
+      <Button variant="outline" type="button" className="history-import-button" disabled={starting || busy} aria-label={`${platformLabel[platform]} ${enabled ? "지원 기록 가져오기" : "수집 설정 열기"}`} aria-busy={starting || collecting} onClick={event => void start(event)}>
         {starting || collecting ? "가져오는 중…" : enabled ? "기록 가져오기" : "수집 설정"}{!starting && !collecting && <Icon name={enabled ? "download" : "settings"} size={13} />}
-      </button>
+      </Button>
     </div>
     {error && <p className="history-import-error" role="alert">{error}</p>}
   </div>

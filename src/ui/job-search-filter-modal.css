@@ -1,0 +1,100 @@
+.ui-dialog-content.job-search-filter-modal {
+  --filter-selected-bg:color-mix(in srgb,var(--surface-hover) 78%,var(--text) 22%);
+  display:grid; grid-template-columns:160px minmax(0,1fr); grid-template-rows:76px minmax(0,1fr) 76px;
+  width:min(880px,calc(100% - 48px)); height:min(640px,calc(100dvh - 64px)); max-height:calc(100dvh - 64px);
+  padding:0; overflow:hidden; border-radius:16px;
+}
+.filter-modal-sidebar { grid-column:1; grid-row:1 / 3; min-height:0; padding:30px 14px 20px; border-right:1px solid var(--border); }
+.filter-modal-sidebar h2 { margin:0 12px 28px; font-size:18px; line-height:24px; font-weight:700; outline:none; }
+.filter-modal-navigation { display:flex; flex-direction:column; gap:7px; }
+.filter-modal-navigation .ui-button { display:flex; align-items:center; justify-content:space-between; min-height:42px; padding:11px 12px; border-radius:8px; color:var(--text-secondary); text-align:left; font-size:13px; font-weight:600; }
+.filter-modal-navigation .ui-button:hover { background:var(--surface-hover); color:var(--text); }
+.filter-modal-navigation .ui-button[aria-selected="true"] { background:var(--filter-selected-bg); color:var(--text); }
+.filter-modal-main { display:contents; }
+.filter-modal-heading { grid-column:2; grid-row:1; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:0 24px; }
+.filter-modal-heading h3 { font-size:19px; font-weight:700; }
+.filter-modal-heading > div { display:flex; align-items:center; gap:12px; }
+.filter-modal-multi-hint { color:var(--text-muted); font-size:11px; }
+.filter-modal-close.ui-button { width:36px; height:36px; border:1px solid var(--border-strong); border-radius:50%; color:var(--text-secondary); }
+.filter-modal-content { grid-column:2; grid-row:2; min-width:0; min-height:0; overflow:auto; overscroll-behavior:contain; }
+.filter-modal-job-picker { display:grid; grid-template-columns:176px minmax(0,1fr); height:100%; min-height:0; }
+.filter-modal-groups { min-width:0; overflow:auto; overscroll-behavior:contain; padding:0 12px 20px 20px; border-right:1px solid var(--border); scrollbar-width:thin; scrollbar-color:var(--border-strong) transparent; }
+.filter-modal-group { display:flex; align-items:center; min-height:42px; margin-bottom:6px; padding:10px 12px; border-radius:7px; cursor:pointer; font-size:12px; font-weight:550; line-height:1.5; color:var(--text-secondary); }
+.filter-modal-group { gap:6px; justify-content:space-between; }
+.filter-modal-group:hover { background:var(--surface-hover); color:var(--text); }
+.filter-modal-group.selected { background:var(--filter-selected-bg); color:var(--text); }
+.filter-modal-group-count { display:grid; place-items:center; flex:none; min-width:18px; height:18px; padding:0 4px; border-radius:5px; background:var(--text-secondary); color:var(--surface); font-size:10px; }
+.filter-modal-job-detail { min-width:0; overflow:auto; overscroll-behavior:contain; padding:0 24px 24px; }
+.filter-modal-category-title { display:flex; align-items:center; gap:14px; margin:2px 0 24px; }
+.filter-modal-category-title h4 { font-size:16px; font-weight:650; }
+.filter-modal-category-icon { display:grid; place-items:center; flex:none; width:46px; height:46px; border-radius:11px; background:linear-gradient(145deg,#4cc6ff,#287fff); color:#fff; }
+.filter-modal-option-search { display:flex; align-items:center; gap:8px; margin-bottom:18px; padding:0 10px; min-height:36px; border:1px solid var(--border-strong); border-radius:8px; color:var(--text-muted); }
+.filter-modal-option-search:focus-within { border-color:var(--link); }
+.filter-modal-option-search .ui-input { min-width:0; width:100%; min-height:34px; padding:7px 0; border:0; background:transparent; box-shadow:none; outline:none; font-size:12px; }
+.filter-modal-role-chips { display:flex; flex-wrap:wrap; align-content:flex-start; gap:8px; min-width:0; }
+.filter-modal-chip { position:relative; display:flex; align-items:center; justify-content:flex-start; gap:8px; min-height:38px; padding:9px 12px; border:1px solid var(--border); border-radius:7px; background:var(--surface-subtle); color:var(--text-secondary); font-size:12px; font-weight:550; line-height:1.5; cursor:pointer; transition:background-color .12s,border-color .12s; }
+.filter-modal-chip:hover { background:color-mix(in srgb,var(--surface-hover) 90%,var(--text) 10%); color:var(--text); }
+.filter-modal-chip.selected { border-color:var(--text-muted); background:var(--filter-selected-bg); color:var(--text); }
+.filter-modal-chip.selected:hover { background:color-mix(in srgb,var(--filter-selected-bg) 90%,var(--text) 10%); }
+.filter-option-check { display:grid; place-items:center; flex:none; width:15px; height:15px; border:1px solid var(--text-muted); border-radius:4px; }
+.selected > .filter-option-check { border-color:var(--text); background:var(--text); color:var(--surface); }
+.filter-modal-group:has(input:focus-visible),.filter-modal-chip:has(input:focus-visible),.filter-modal-site:has(input:focus-visible) { outline:2px solid var(--focus); outline-offset:2px; }
+.filter-modal-description,.filter-modal-empty { font-size:12px; line-height:1.8; color:var(--text-muted); }
+.filter-modal-job-detail > .filter-modal-description { margin-top:16px; }
+.filter-modal-empty { margin-top:16px; }
+.filter-modal-options { padding:2px 24px 24px; }
+.filter-modal-options > .filter-modal-option-search { max-width:320px; }
+.filter-modal-region-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; min-width:0; }
+.filter-modal-career { display:grid; gap:24px; padding:2px 24px 24px; }
+.career-presets { display:flex; flex-wrap:wrap; gap:8px; }
+.career-presets .ui-button { background:var(--surface-subtle); color:var(--text-secondary); border-color:var(--border); }
+.career-presets .ui-button:hover { background:var(--surface-hover); color:var(--text); }
+.career-presets .ui-button[aria-pressed="true"] { background:var(--filter-selected-bg); color:var(--text); border-color:var(--text-muted); }
+.career-inclusions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; min-width:0; }
+.career-inclusions legend,.career-year-range legend { margin-bottom:12px; font-size:12px; font-weight:600; color:var(--text-secondary); }
+.career-inclusions .filter-modal-chip { min-height:44px; }
+.career-year-range > div { display:grid; grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr); align-items:end; gap:10px; }
+.career-year-range label { display:grid; gap:8px; min-width:0; font-size:11px; color:var(--text-muted); }
+.career-year-range > div > span { display:grid; place-items:center; height:44px; color:var(--text-muted); }
+.career-year-range .ui-select { min-height:44px; background:var(--surface-hover); }
+.career-year-range .ui-select:hover { background:color-mix(in srgb,var(--surface-hover) 90%,var(--text) 10%); }
+.career-range-error { color:var(--danger); font-size:12px; line-height:1.6; }
+.career-selection-summary { display:grid; gap:8px; padding:16px; border:1px solid var(--border); border-radius:9px; background:var(--surface-subtle); }
+.career-selection-summary > span { font-size:11px; color:var(--text-muted); }
+.career-selection-summary > strong { font-size:13px; line-height:1.6; font-weight:550; color:var(--text); overflow-wrap:anywhere; }
+.filter-modal-site-grid { display:grid; gap:12px; min-width:0; }
+.filter-modal-site { display:flex; align-items:center; gap:12px; padding:18px; border:1px solid var(--border); border-radius:10px; color:var(--text-secondary); font-size:14px; cursor:pointer; }
+.filter-modal-site:hover { background:var(--surface-hover); }
+.filter-modal-site.selected { border-color:var(--border-strong); background:var(--surface-hover); color:var(--text); }
+.filter-modal-site input { width:17px; height:17px; margin:0; accent-color:var(--accent); }
+.filter-modal-site .platform-symbol { width:24px; height:24px; }
+.filter-modal-footer { grid-column:1 / -1; grid-row:3; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 24px; border-top:1px solid var(--border); background:var(--surface); }
+.filter-modal-footer > div { display:flex; align-items:center; gap:8px; }
+.filter-modal-footer .ui-button { min-height:42px; padding:10px 16px; }
+.filter-modal-footer .ui-button-primary { min-width:130px; }
+@media (max-width:680px) {
+  .ui-dialog-content.job-search-filter-modal { grid-template-columns:minmax(0,1fr); grid-template-rows:auto 64px minmax(0,1fr) 76px; left:0; top:auto; bottom:0; transform:none; width:100%; height:min(720px,calc(100dvh - 16px)); max-height:calc(100dvh - 16px); border-radius:16px 16px 0 0; }
+  .filter-modal-sidebar { grid-column:1; grid-row:1; padding:20px 16px 12px; border-right:0; border-bottom:1px solid var(--border); }
+  .filter-modal-sidebar h2 { margin:0 0 16px; font-size:16px; }
+  .filter-modal-navigation { flex-direction:row; gap:6px; }
+  .filter-modal-navigation .ui-button { justify-content:center; gap:6px; flex:1; min-height:38px; padding:8px 5px; font-size:12px; white-space:nowrap; }
+  .filter-modal-heading { grid-column:1; grid-row:2; padding:0 16px; }
+  .filter-modal-heading h3 { font-size:17px; }
+  .filter-modal-heading > div { gap:8px; }
+  .filter-modal-multi-hint { font-size:10px; }
+  .filter-modal-content { grid-column:1; grid-row:3; }
+  .filter-modal-job-picker { grid-template-columns:122px minmax(0,1fr); }
+  .filter-modal-groups { padding:0 8px 16px; }
+  .filter-modal-group { padding:10px 8px; font-size:11px; }
+  .filter-modal-job-detail { padding:0 14px 20px; }
+  .filter-modal-category-title { gap:9px; margin-bottom:18px; }
+  .filter-modal-category-title h4 { font-size:13px; }
+  .filter-modal-category-icon { width:36px; height:36px; border-radius:9px; }
+  .filter-modal-role-chips { gap:7px; }
+  .filter-modal-chip { padding:8px 10px; font-size:11px; }
+  .filter-modal-options { padding:0 16px 20px; }
+  .filter-modal-region-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  .filter-modal-career { padding:0 16px 20px; gap:22px; }
+  .filter-modal-footer { grid-row:4; padding:14px 16px max(14px,env(safe-area-inset-bottom)); }
+  .filter-modal-footer .ui-button-primary { min-width:100px; }
+}

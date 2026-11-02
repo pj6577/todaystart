@@ -1,0 +1,65 @@
+@font-face {
+  font-family: "Pretendard";
+  src: url("../../assets/branding/PretendardVariable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  color-scheme: light;
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-subtle: #fafafa;
+  --surface-hover: #f4f4f5;
+  --text: #18181b;
+  --text-secondary: #3f3f46;
+  --text-muted: #52525b;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --accent: #1d4ed8;
+  --accent-hover: #1e40af;
+  --on-accent: #ffffff;
+  --link: #1d4ed8;
+  --selected: #f4f4f5;
+  --selected-text: #18181b;
+  --applied-badge-bg: #eeeff2;
+  --applied-badge-text: #27292f;
+  --focus: #52525b;
+  --pending-dot: #92400e;
+  --danger: #b91c1c;
+  --overlay: #00000066;
+  --shadow: 0 16px 64px #00000026;
+  font-family: "Pretendard", "Malgun Gothic", system-ui, sans-serif;
+  font-size: 14px;
+  font-synthesis: none;
+  background: var(--bg);
+  color: var(--text);
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #09090b; --surface: #18181b; --surface-subtle: #18181b;
+  --surface-hover: #27272a; --text: #fafafa; --text-secondary: #d4d4d8;
+  --text-muted: #a1a1aa; --border: #27272a; --border-strong: #3f3f46;
+  --accent: #1d4ed8; --accent-hover: #2563eb; --link: #93c5fd;
+  --selected: #27272a; --selected-text: #fafafa; --focus: #a1a1aa;
+  --applied-badge-bg: #27292f; --applied-badge-text: #ffffff;
+  --pending-dot: #fbbf24; --danger: #fca5a5;
+  --overlay: #00000099; --shadow: 0 16px 64px #00000066;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    color-scheme: dark;
+    --bg: #09090b; --surface: #18181b; --surface-subtle: #18181b;
+    --surface-hover: #27272a; --text: #fafafa; --text-secondary: #d4d4d8;
+    --text-muted: #a1a1aa; --border: #27272a; --border-strong: #3f3f46;
+    --accent: #1d4ed8; --accent-hover: #2563eb; --link: #93c5fd;
+    --selected: #27272a; --selected-text: #fafafa; --focus: #a1a1aa;
+    --applied-badge-bg: #27292f; --applied-badge-text: #ffffff;
+    --pending-dot: #fbbf24; --danger: #fca5a5;
+    --overlay: #00000099; --shadow: 0 16px 64px #00000066;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: inherit; }
+button, input, select { font: inherit; }
+button, a, input, select, summary { outline-offset: 3px; }

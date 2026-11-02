@@ -1,3 +1,5 @@
+import { Pagination } from "./primitives/pagination"
+import { Button } from "./primitives/button"
 import React, { useEffect, useState } from "react"
 import { safeJobUrl } from "../core/urls"
 import { readStatusLabel, recordReadStatus, recordDateLabel, recordStatusLabel, requiresStatusReview, type ApplicationRecord } from "../core/model"
@@ -40,7 +42,7 @@ export function RecordTable({ records, total, sort, onSort, onEdit, onDelete, on
     <div className="empty-symbol"><Icon name={total ? "search" : "list"} size={24} /></div>
     <h3>{total ? "검색 결과가 없습니다" : "지원 기록이 없습니다"}</h3>
     <p><Sentences>{total ? "검색어나 지원 경로 필터를 변경해 주세요. 취소 기록은 설정에서 표시할 수 있습니다." : "지원 현황에서 가져오거나 직접 추가할 수 있습니다."}</Sentences></p>
-    {!total && <div className="empty-actions">{onAdd && <button className="btn" onClick={onAdd}>첫 지원 기록 직접 추가</button>}{showImportActions && platformIds.map(platform => <HistoryLink platform={platform} key={platform} />)}</div>}
+    {!total && <div className="empty-actions">{onAdd && <Button variant="outline" onClick={onAdd}>첫 지원 기록 직접 추가</Button>}{showImportActions && platformIds.map(platform => <HistoryLink platform={platform} key={platform} />)}</div>}
   </div>
   return <>
     <div className="table-scroll"><table>
@@ -48,7 +50,7 @@ export function RecordTable({ records, total, sort, onSort, onEdit, onDelete, on
         const active = sort.key === column.key
         const nextDescending = active ? sort.direction === "ascending" : column.key === "appliedAt"
         return <th key={column.key} scope="col" aria-sort={active ? sort.direction : "none"}>
-          <button type="button" className="table-sort-button" aria-label={`${column.label} 정렬`} title={`${column.label} ${nextDescending ? "내림차순" : "오름차순"} 정렬`} onClick={() => onSort(column.key)}>{column.label}<span aria-hidden="true">{active ? sort.direction === "ascending" ? "↑" : "↓" : "↕"}</span></button>
+          <Button variant="unstyled" type="button" className="table-sort-button" aria-label={`${column.label} 정렬`} title={`${column.label} ${nextDescending ? "내림차순" : "오름차순"} 정렬`} onClick={() => onSort(column.key)}>{column.label}<span aria-hidden="true">{active ? sort.direction === "ascending" ? "↑" : "↓" : "↕"}</span></Button>
         </th>
       })}<th scope="col" className="actions-heading">관리</th></tr></thead>
       <tbody>{visible.map(record => {
@@ -59,12 +61,12 @@ export function RecordTable({ records, total, sort, onSort, onEdit, onDelete, on
           <td className="job-cell">{url ? <a href={url} target="_blank" rel="noreferrer">{record.jobTitle}<Icon name="external" size={12} /></a> : record.jobTitle}</td>
           <td><PlatformTag platform={record.platform} label={record.sourceLabel} /></td>
           <td className="date-cell" title={record.appliedAt ? "지원일" : record.sourceCreatedAt ? "사이트에 표시된 작성일 (지원일 미확인)" : "지원일과 작성일을 확인하지 못했어요"}>{recordDateLabel(record)}{time && <time className="submission-time" dateTime={record.appliedAtTime}>{time} 제출</time>}</td>
-          <td><button type="button" className="status-review-button" aria-label={`${record.companyName} ${record.jobTitle} ${requiresStatusReview(record) ? "상태 확인" : "상태 수정"}`} onClick={() => (onStatusEdit || onEdit)(record)}><span className={`status ${record.status}${requiresStatusReview(record) ? " status-with-alert" : ""}`}>{recordStatusLabel(record)}{requiresStatusReview(record) && <span className="status-alert" aria-hidden="true">!</span>}</span></button></td>
+          <td><Button variant="unstyled" type="button" className="status-review-button" aria-label={`${record.companyName} ${record.jobTitle} ${requiresStatusReview(record) ? "상태 확인" : "상태 수정"}`} onClick={() => (onStatusEdit || onEdit)(record)}><span className={`status ${record.status}${requiresStatusReview(record) ? " status-with-alert" : ""}`}>{recordStatusLabel(record)}{requiresStatusReview(record) && <span className="status-alert" aria-hidden="true">!</span>}</span></Button></td>
           <td className="small muted">{readStatusLabel[recordReadStatus(record)]}</td>
-          <td><div className="row-actions">{onDetails && <button aria-label={`${record.companyName} ${record.jobTitle} 메모와 일정`} onClick={() => onDetails(record)}>메모·일정{noteCounts[record.id] ? ` ${noteCounts[record.id]}` : ""}</button>}<button aria-label={`${record.companyName} ${record.jobTitle} 수정`} onClick={() => onEdit(record)}>수정</button><button aria-label={`${record.companyName} ${record.jobTitle} 삭제`} onClick={() => onDelete(record)}>삭제</button></div></td>
+          <td><div className="row-actions">{onDetails && <Button variant="unstyled" aria-label={`${record.companyName} ${record.jobTitle} 메모와 일정`} onClick={() => onDetails(record)}>메모·일정{noteCounts[record.id] ? ` ${noteCounts[record.id]}` : ""}</Button>}<Button variant="unstyled" aria-label={`${record.companyName} ${record.jobTitle} 수정`} onClick={() => onEdit(record)}>수정</Button><Button variant="unstyled" aria-label={`${record.companyName} ${record.jobTitle} 삭제`} onClick={() => onDelete(record)}>삭제</Button></div></td>
         </tr>
       })}</tbody>
     </table></div>
-    <div className="table-footer"><span>{pages > 1 ? `${start + 1}–${start + visible.length}건 표시 / 검색 결과 ${records.length}건 / 전체 ${total}건` : `${records.length}건 표시 / 전체 ${total}건`}</span>{pages > 1 ? <nav className="record-pagination" aria-label="지원 기록 페이지"><button type="button" className="btn" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>이전 페이지</button><span role="status" aria-live="polite">{currentPage} / {pages} 페이지</span><button type="button" className="btn" disabled={currentPage === pages} onClick={() => setPage(currentPage + 1)}>다음 페이지</button></nav> : <span>취소 기록 표시 여부는 설정에서 변경</span>}</div>
+    <div className="table-footer"><span>{pages > 1 ? `${start + 1}–${start + visible.length}건 표시 / 검색 결과 ${records.length}건 / 전체 ${total}건` : `${records.length}건 표시 / 전체 ${total}건`}</span>{pages > 1 ? <Pagination className="record-pagination" aria-label="지원 기록 페이지"><Button variant="outline" type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>이전 페이지</Button><span role="status" aria-live="polite">{currentPage} / {pages} 페이지</span><Button variant="outline" type="button" disabled={currentPage === pages} onClick={() => setPage(currentPage + 1)}>다음 페이지</Button></Pagination> : <span>취소 기록 표시 여부는 설정에서 변경</span>}</div>
   </>
 }

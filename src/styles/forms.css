@@ -1,0 +1,20 @@
+.modal {
+  width: min(440px, calc(100vw - 48px)); }
+.modal-heading { display: flex; align-items: center; justify-content: space-between; }
+.modal label { display: block; margin-top: 17px; color: var(--text-secondary); font-size: 12px; }
+.modal .ui-input {
+  margin-top: 7px; }
+.modal-description { color: var(--text-secondary); font-size: 12px; margin-top: 15px; }
+.modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+.manual-modal { width: min(500px, calc(100vw - 48px)); max-height: calc(100vh - 48px); overflow-y: auto; }
+.manual-modal input, .manual-modal select { min-width: 0; }
+.manual-source-fieldset { min-width: 0; margin: 17px 0 0; padding: 0; border: 0; }
+.manual-source-fieldset legend { margin-bottom: 8px; font-size: 12px; font-weight: 500; }
+.manual-source-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.manual-modal .manual-source-option { display: flex; align-items: center; gap: 6px; min-height: 40px; margin: 0; padding: 7px; border: 1px solid var(--border); border-radius: 6px; font-size: 11px; cursor: pointer; }
+.manual-source-option:has(input:checked) { border-color: var(--accent); background: var(--selected); }
+.manual-source-option:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+.manual-modal .manual-source-option input { width: 13px; height: 13px; margin: 0; padding: 0; accent-color: var(--accent); flex: none; }
+.manual-source-other { grid-column: 1 / -1; }
+.form-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-error { margin-top: 16px; }

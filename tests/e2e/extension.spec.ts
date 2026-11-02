@@ -14,7 +14,7 @@ import { saraminCompletionLayoutDetail, saraminCompletionLayoutFrame } from "../
 
 const test = base.extend<{ context: BrowserContext; ui: Page; extensionId: string }>({
   context: async ({}, use) => {
-    const extension = path.resolve("build/chrome-mv3-prod")
+    const extension = path.resolve(process.env.TODAYSTART_TEST_EXTENSION_DIR || "build/chrome-mv3-prod")
     const context = await chromium.launchPersistentContext("", { channel: "chromium", headless: true, viewport: { width: 1440, height: 1000 }, args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`] })
     await context.route(/^https:\/\/www\.(saramin|jobkorea|wanted)\.co\.kr\//, async route => {
       const url = new URL(route.request().url())
@@ -1014,6 +1014,8 @@ test("대시보드 채용 브랜드 말풍선: hover·키보드·터치·화면 
 
 test("대시보드 캘린더: 날짜별 기록·사이트 필터·월 이동·키보드", async ({ ui }) => {
   await ui.clock.setFixedTime(new Date("2026-10-20T12:00:00+09:00"))
+  await ui.reload()
+  await expect(ui.locator(".calendar-month")).toHaveText("2026년 10월")
   const samples = [
     record({ platform: "saramin", appliedAt: "2026-10-19" }),
     record({ platform: "saramin", appliedAt: "2026-10-19" }),
@@ -1084,6 +1086,8 @@ test("대시보드 캘린더: 날짜별 기록·사이트 필터·월 이동·�
 
 test("캘린더 고정 높이·목록 내부 스크롤·응원 배너 하단 정렬", async ({ ui }) => {
   await ui.clock.setFixedTime(new Date("2026-10-20T12:00:00+09:00"))
+  await ui.reload()
+  await expect(ui.locator(".calendar-month")).toHaveText("2026년 10월")
   const records = Array.from({ length: 46 }, (_, index) => record({ id: `scroll-${index}`, sourceApplicationId: `scroll-${index}`, companyName: `스크롤 검증 기업 ${String(index).padStart(2, "0")}`, jobTitle: "웹 서비스와 제품 경험을 개발하는 프론트엔드 엔지니어", appliedAt: index === 45 ? "2026-10-19" : "2026-10-20" }))
   await rpc(ui, { type: "restore", backup: { format: "todaystart", version: 1, exportedAt: new Date().toISOString(), records } })
   const calendar = ui.locator(".calendar-panel"), column = ui.locator(".dashboard-side-column"), chart = ui.locator(".weekday-panel"), banner = ui.locator(".encouragement-banner")
@@ -1508,6 +1512,10 @@ test("실제 지원 경로만 표시·직접 추가 사이트 선택·통계와 
 
 test("대시보드 요약 재구성·기록 표 브랜드 라벨·라이트 다크 모바일", async ({ ui }) => {
   await ui.clock.setFixedTime(new Date("2026-10-20T12:00:00+09:00"))
+  // The fixture has already mounted the calendar with the real current month.
+  // Reload after fixing the clock so the test does not depend on today's month.
+  await ui.reload()
+  await expect(ui.locator(".calendar-month")).toHaveText("2026년 10월")
   const sources = ["saramin", "jobkorea", "wanted", "manual"] as const
   const dates = ["2026-10-19", "2026-10-16", "2026-10-15", "2026-10-12", "2026-10-09", "2026-10-08", "2026-10-02", "2026-09-28"]
   const records = Array.from({ length: 8 }, (_, index) => record({ platform: sources[index % 4], sourceApplicationId: `design-${index}`, companyName: `가상 기업 ${index % 6 + 1}`, jobTitle: index % 2 ? "프론트엔드 개발자" : "웹 서비스 개발자", appliedAt: dates[index], readStatus: index < 3 ? "read" : index < 6 ? "unread" : "unknown" }))
@@ -2812,7 +2820,7 @@ test("MV3 확장 프로그램 로드, 최소 권한, 초기 관리 화면과 팝
   await expect(popup.getByRole("heading", { name: "지원 기록", exact: true })).toBeVisible()
   await expect(popup.getByRole("button", { name: "+ 직접 추가", exact: true })).toBeInViewport()
   await expect(popup.getByRole("button", { name: "대시보드 열기", exact: true })).toBeInViewport()
-  await expect(popup.getByRole("button", { name: "대시보드 열기", exact: true })).toHaveClass(/btn/)
+  await expect(popup.getByRole("button", { name: "대시보드 열기", exact: true })).toHaveAttribute("data-slot", "button")
   await expect(popup.getByRole("link", { name: "사람인 지원 기록 가져오기" })).toHaveAttribute("href", "https://www.saramin.co.kr/zf_user/persons/apply-status-list")
   await expect(popup.getByRole("link", { name: "잡코리아 지원 기록 가져오기" })).toHaveAttribute("href", "https://www.jobkorea.co.kr/User/ApplyMng?Page=1")
   await expect(popup.getByRole("link", { name: "원티드 지원 기록 가져오기" })).toHaveAttribute("href", "https://www.wanted.co.kr/status/applications/applied?q&start_date=&end_date=&page=1&offset=0&limit=10")

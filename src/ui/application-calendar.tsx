@@ -1,3 +1,4 @@
+import { Button } from "./primitives/button"
 import React, { useLayoutEffect, useRef, useState } from "react"
 import { sourceLabel } from "../core/model"
 import { applicationPathLabel, type ApplicationPath } from "../core/application-path"
@@ -14,10 +15,10 @@ export function ApplicationCalendar({ data, month, today, source, onMonth }: { d
   return <section className="analytics-panel calendar-panel" aria-labelledby="calendar-title">
     <div className="analytics-heading"><div><h2 id="calendar-title">지원 캘린더</h2><p>{source === "all" ? "전체" : applicationPathLabel(source)} · 이달 지원 {data.total}건</p></div>
       <div className="calendar-navigation">
-        <button className="calendar-today" onClick={() => { onMonth(today.slice(0, 7)); setSelection(today) }}>오늘</button>
-        <button className="icon-btn" aria-label="이전 달" onClick={() => onMonth(shiftCalendarMonth(month, -1))}><span aria-hidden="true">‹</span></button>
+        <Button variant="unstyled" className="calendar-today" onClick={() => { onMonth(today.slice(0, 7)); setSelection(today) }}>오늘</Button>
+        <Button variant="ghost" size="icon" className="icon-btn" aria-label="이전 달" onClick={() => onMonth(shiftCalendarMonth(month, -1))}><span aria-hidden="true">‹</span></Button>
         <span className="calendar-month" aria-live="polite">{title}</span>
-        <button className="icon-btn" aria-label="다음 달" disabled={month >= today.slice(0, 7)} onClick={() => onMonth(shiftCalendarMonth(month, 1))}><span aria-hidden="true">›</span></button>
+        <Button variant="ghost" size="icon" className="icon-btn" aria-label="다음 달" disabled={month >= today.slice(0, 7)} onClick={() => onMonth(shiftCalendarMonth(month, 1))}><span aria-hidden="true">›</span></Button>
       </div>
     </div>
     <div className="application-calendar" role="group" aria-label={`${title} 지원 날짜별 분포`} onKeyDown={event => {
@@ -32,11 +33,11 @@ export function ApplicationCalendar({ data, month, today, source, onMonth }: { d
       if (target && !target.disabled) target.focus({ preventScroll: true })
     }}>
       <div className="calendar-weekdays" aria-hidden="true">{["월", "화", "수", "목", "금", "토", "일"].map(day => <span key={day}>{day}</span>)}</div>
-      <div className="calendar-days">{data.cells.map((cell, index) => cell ? <button key={cell.date} className="calendar-day" disabled={cell.future}
+      <div className="calendar-days">{data.cells.map((cell, index) => cell ? <Button variant="unstyled" key={cell.date} className="calendar-day" disabled={cell.future}
         aria-label={`${cell.date} 지원 ${cell.records.length}건`} aria-pressed={selected === cell.date} aria-current={cell.date === today ? "date" : undefined}
         data-date={cell.date} data-count={cell.records.length > 0} tabIndex={(selected || `${month}-01`) === cell.date ? 0 : -1} onFocus={() => setSelection(cell.date)} onClick={() => setSelection(cell.date)}>
         <span>{cell.day}</span>{cell.records.length > 0 && <small>{cell.records.length}건</small>}
-      </button> : <span key={`blank-${index}`} className="calendar-blank" aria-hidden="true" />)}</div>
+      </Button> : <span key={`blank-${index}`} className="calendar-blank" aria-hidden="true" />)}</div>
     </div>
     <div className="calendar-selection" aria-live="polite">
       {selected ? <><div className="calendar-selection-heading"><h3>{Number(selected.slice(5, 7))}월 {Number(selected.slice(8))}일</h3><span>{entries.length}건</span></div>

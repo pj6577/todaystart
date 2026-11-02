@@ -1,3 +1,4 @@
+import { Button } from "./ui/primitives/button"
 import React, { useEffect, useRef, useState } from "react"
 import { Brand, Icon, Notice, PlatformTag, Sentences } from "./ui/components"
 import { download, formatTime, pageCommand, type Snapshot } from "./ui/client"
@@ -80,12 +81,12 @@ function Popup() {
   return <main className="popup" aria-busy={busy}>
     <header className="popup-header">
       <Brand />
-      <button className="icon-btn" aria-label="설정 열기" onClick={() => void openManagement("settings")}><Icon name="settings" size={19} /></button>
+      <Button variant="ghost" size="icon" className="icon-btn" aria-label="설정 열기" onClick={() => void openManagement("settings")}><Icon name="settings" size={19} /></Button>
     </header>
 
     <section className="popup-summary" aria-label="지원 기록 요약">
-      <div className="section-label"><h1>지원 기록</h1><button className="btn dashboard-button" onClick={() => void openManagement("overview")}><Icon name="grid" size={14} />대시보드 열기 <Icon name="arrow" size={14} /></button></div>
-      <div className="popup-total"><div className="popup-number">{records.length.toLocaleString()}<span>건</span></div><button className="btn primary" onClick={() => void openManagement("add")}>+ 직접 추가</button></div>
+      <div className="section-label"><h1>지원 기록</h1><Button variant="outline" className="dashboard-button" onClick={() => void openManagement("overview")}><Icon name="grid" size={14} />대시보드 열기 <Icon name="arrow" size={14} /></Button></div>
+      <div className="popup-total"><div className="popup-number">{records.length.toLocaleString()}<span>건</span></div><Button variant="default"  onClick={() => void openManagement("add")}>+ 직접 추가</Button></div>
       {recordedSources.length > 0 && <>
         <div className="popup-metrics-heading"><span>지원 경로별</span><span>{recordedSources.length}개 경로</span></div>
         <dl className="popup-metrics" aria-label="지원 경로별 기록 수" tabIndex={recordedSources.length > 6 ? 0 : undefined}>
@@ -100,17 +101,17 @@ function Popup() {
       <div className="context-label"><PlatformTag platform={page.platform} /><span>{pageTitle}</span></div>
       <strong className="context-title">{(waiting || collectingHere) && <span className="collection-spinner" aria-hidden="true" />}{page.matches ? `지원 이력이 있는 공고 ${page.matches}개` : isHistory ? collectingHere ? "지원 기록 가져오는 중" : waiting ? "지원 목록 불러오는 중" : "지원 현황에서 가져오기" : "저장된 기록과 비교"}</strong>
       <p><Sentences>{isHistory && !enabled ? "이 사이트의 수집이 꺼져 있습니다. 설정에서 다시 켤 수 있습니다." : isHistory && collectingHere ? run.message : isHistory && !page.profileReady ? "지원 현황을 감지했습니다. 실제 목록을 읽는 기능은 화면 검증이 필요합니다." : page.message}</Sentences></p>
-      {isHistory && enabled && page.profileReady && <button className="btn primary" disabled={busy || collecting} onClick={() => void runAll()}><Icon name="download" size={15} />{collecting ? "페이지를 순서대로 가져오는 중…" : "조회 기간 전체 가져오기"}</button>}
-      {isHistory && <button className="btn" disabled={busy || collecting || waiting} onClick={() => {
+      {isHistory && enabled && page.profileReady && <Button variant="default"  disabled={busy || collecting} onClick={() => void runAll()}><Icon name="download" size={15} />{collecting ? "페이지를 순서대로 가져오는 중…" : "조회 기간 전체 가져오기"}</Button>}
+      {isHistory && <Button variant="outline"  disabled={busy || collecting || waiting} onClick={() => {
         if (!page.profileReady || !enabled) void openManagement("settings")
         else void runSync()
-      }}><Icon name={page.profileReady && enabled ? "refresh" : "settings"} size={15} />{waiting ? "목록이 나타나기를 기다리는 중…" : busy ? "가져오는 중…" : !enabled ? "수집 설정" : !page.profileReady ? "수집 상태 확인" : "현재 목록 가져오기"}</button>}
+      }}><Icon name={page.profileReady && enabled ? "refresh" : "settings"} size={15} />{waiting ? "목록이 나타나기를 기다리는 중…" : busy ? "가져오는 중…" : !enabled ? "수집 설정" : !page.profileReady ? "수집 상태 확인" : "현재 목록 가져오기"}</Button>}
       {isHistory && <p className="collection-help">사이트에 설정한 기간과 필터를 유지하며 첫 페이지부터 읽습니다.</p>}
-      {page.hasNextPage && tabId && <button className="text-btn" onClick={() => void pageCommand(tabId, "NEXT_PAGE").then(() => window.close()).catch(e => setError(e.message))}>다음 페이지 열기 <Icon name="arrow" size={14} /></button>}
-      {isHistory && tabId && <button className="text-btn" onClick={() => void pageCommand(tabId, "HISTORY_DIAGNOSTICS").then(data => {
+      {page.hasNextPage && tabId && <Button variant="link" className="text-btn" onClick={() => void pageCommand(tabId, "NEXT_PAGE").then(() => window.close()).catch(e => setError(e.message))}>다음 페이지 열기 <Icon name="arrow" size={14} /></Button>}
+      {isHistory && tabId && <Button variant="link" className="text-btn" onClick={() => void pageCommand(tabId, "HISTORY_DIAGNOSTICS").then(data => {
         download(`오늘시작-${page.platform}-화면진단.json`, JSON.stringify(data, null, 2), "application/json")
         setNotice("텍스트와 개인정보를 제거한 화면 구조를 저장했습니다.")
-      }).catch(e => setError(e.message))}>화면 진단 파일 저장 <Icon name="download" size={14} /></button>}
+      }).catch(e => setError(e.message))}>화면 진단 파일 저장 <Icon name="download" size={14} /></Button>}
     </section>}
 
     <HistoryRunStatus run={run} />
@@ -125,14 +126,14 @@ function Popup() {
 
     <section className="popup-recent">
       <div className="section-label"><h2>최근 지원 기록</h2>{recent.length > 0 && <span className="muted small">최근 {recent.length}건</span>}</div>
-      {recent.length ? <div className="recent-list">{recent.map(record => <button className="recent-record" key={record.id} onClick={() => void openManagement("records")}>
+      {recent.length ? <div className="recent-list">{recent.map(record => <Button variant="unstyled" className="recent-record" key={record.id} onClick={() => void openManagement("records")}>
         <div><strong>{record.companyName}</strong><span>{record.jobTitle}</span></div>
         <div className="recent-meta"><span>{recordDateLabel(record)}</span><span>{recordStatusLabel(record)}</span></div>
-      </button>)}</div> : <div className="popup-empty"><Icon name="list" size={19} /><span>저장된 지원 기록이 없습니다.</span></div>}
+      </Button>)}</div> : <div className="popup-empty"><Icon name="list" size={19} /><span>저장된 지원 기록이 없습니다.</span></div>}
     </section>
 
     {error && <Notice error>{error}</Notice>}{notice && <Notice>{notice}</Notice>}
-    <div className="popup-actions"><button className="btn popup-manage" onClick={() => void openManagement("records")}>지원 기록 관리 <Icon name="arrow" size={15} /></button></div>
+    <div className="popup-actions"><Button variant="outline" className="popup-manage" onClick={() => void openManagement("records")}>지원 기록 관리 <Icon name="arrow" size={15} /></Button></div>
     <footer className="popup-footer"><span>{last ? `최근 수집 ${formatTime(last.at)}` : "수집 이력 없음"}</span><CommunityLink /></footer>
   </main>
 }

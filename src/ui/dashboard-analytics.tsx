@@ -1,3 +1,4 @@
+import { Button } from "./primitives/button"
 import React, { useMemo, useState, type CSSProperties } from "react"
 import { type ApplicationRecord, type ApplicationSource } from "../core/model"
 import { applicationPathLabel, type ApplicationPath } from "../core/application-path"
@@ -33,16 +34,16 @@ export function DashboardAnalytics({ records, source, onSource }: { records?: Ap
   }).join(", ")
   return <div className="dashboard-analytics" aria-busy={!records} style={{ "--chart-color": color } as CSSProperties}>
     <section className="analytics-panel source-panel" aria-labelledby="source-chart-title">
-      <div className="analytics-heading"><h2 id="source-chart-title">지원 경로별 비율</h2><button className="chart-reset" aria-pressed={source === "all"} onClick={() => onSource("all")}>전체 보기</button></div>
+      <div className="analytics-heading"><h2 id="source-chart-title">지원 경로별 비율</h2><Button variant="unstyled" className="chart-reset" aria-pressed={source === "all"} onClick={() => onSource("all")}>전체 보기</Button></div>
       <div className="source-chart-content">
         <div className="source-donut" role="img" aria-label={`전체 지원 ${all.total}건. ${all.sources.map(item => `${applicationPathLabel(item.platform)} ${item.count}건 ${sharePercent(item.count, all.total)}%`).join(", ")}`}
           style={{ background: gradient ? `conic-gradient(${gradient})` : "var(--border)" }}>
           <span><small>{source === "all" ? "전체 지원" : scope}</small><strong>{records ? stats.total.toLocaleString() : "—"}<em>건</em></strong></span>
         </div>
         <ul className="source-chart-legend">{all.sources.map(item => <li key={item.platform}>
-          <button onClick={() => onSource(source === item.platform ? "all" : item.platform)} aria-label={`${applicationPathLabel(item.platform)} 통계 보기`} aria-pressed={source === item.platform}>
+          <Button variant="unstyled" onClick={() => onSource(source === item.platform ? "all" : item.platform)} aria-label={`${applicationPathLabel(item.platform)} 통계 보기`} aria-pressed={source === item.platform}>
             <span className="source-label">{sourceBrand(item.platform) && <img className="platform-symbol" src={sourceBrand(item.platform)!.symbol} alt="" width={20} height={20} />}{applicationPathLabel(item.platform)}</span><strong>{item.count}<small>건</small></strong><b>{sharePercent(item.count, all.total)}%</b>
-          </button>
+          </Button>
         </li>)}</ul>
         {records && !all.total && <p className="source-chart-empty">지원 기록을 추가하면 경로별 비율이 표시됩니다.</p>}
       </div>
@@ -64,11 +65,11 @@ function ActivityChart({ bins, total, label, dense = false }: { bins: { key: str
     <div className="chart-axis" aria-hidden="true"><span>{ceiling}</span><span>{ceiling / 2}</span><span>0</span></div>
     <div className="activity-plot" style={{ "--chart-columns": bins.length } as CSSProperties}>
       {bins.map((bin, index) => <div className="activity-column" key={bin.key}>
-        <button className="activity-bar" data-pinned={pinned === bin.key} aria-label={`${bin.key} 지원 ${bin.count}건, 기간 내 ${sharePercent(bin.count, total)}%`}
+        <Button variant="unstyled" className="activity-bar" data-pinned={pinned === bin.key} aria-label={`${bin.key} 지원 ${bin.count}건, 기간 내 ${sharePercent(bin.count, total)}%`}
           onClick={() => setPinned(current => current === bin.key ? undefined : bin.key)} onBlur={() => setPinned(undefined)}>
           <span className="activity-fill" style={{ height: `${bin.count / ceiling * 100}%` }} />
           <span className="chart-tooltip">{bin.key} · {bin.count}건 · {sharePercent(bin.count, total)}%</span>
-        </button>
+        </Button>
         <span className="activity-label">{!dense || (index % 7 === 0 && index < bins.length - 3) || index === bins.length - 1 ? bin.label : ""}</span>
       </div>)}
     </div>

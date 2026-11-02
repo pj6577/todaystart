@@ -6,6 +6,10 @@
 
 Dexie, React, Plasmo, Fuse.js, Zod와 그 밖의 의존성은 각 패키지의 라이선스를 따릅니다. 정확한 버전은 `package-lock.json`, 라이선스와 저작권 고지는 설치한 각 패키지의 파일을 확인하세요. 이 프로젝트의 이용 제한은 독립적으로 취득한 제3자 패키지의 권리를 제한하지 않습니다. 번들이 보존하는 제3자 고지를 제거하지 마세요.
 
+## UI 컴포넌트
+
+`src/ui/primitives`의 버튼·입력창·대화상자·팝오버·스위치·카드·페이지 탐색은 [shadcn/ui](https://github.com/shadcn-ui/ui)의 MIT 코드에 기반합니다. React 18·Tailwind 3용 `new-york` 컴포넌트를 오늘시작의 테마와 동작에 맞게 수정했습니다. [원문 라이선스](src/ui/primitives/LICENSE.txt)를 저장소와 확장 프로그램 ZIP(`shadcn-MIT.txt`)에 동봉합니다. Radix UI·class-variance-authority·clsx·tailwind-merge도 각 패키지의 라이선스를 따릅니다.
+
 ## 서체
 
 | 서체 | 동봉한 고지 |

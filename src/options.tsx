@@ -1,3 +1,6 @@
+import { Card } from "./ui/primitives/card"
+import { Button } from "./ui/primitives/button"
+import { Input } from "./ui/primitives/input"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Brand, Icon, Notice } from "./ui/components"
 import { download, formatTime, toCsv } from "./ui/client"
@@ -40,15 +43,16 @@ import type { CareerEventChange } from "./ui/career-board"
 import type { CareerEvent } from "./core/planner"
 import { EventKindsProvider } from "./ui/event-kinds-context"
 import { EventKindsEditor } from "./ui/event-kinds-editor"
+import { JobSearch } from "./ui/job-search"
 import "./style.css"
 import "./ui/planner.css"
 import "./ui/career-board.css"
 import "./ui/note-board.css"
 
-type View = "overview" | "records" | "calendar" | "notes" | "settings"
+type View = "overview" | "search" | "records" | "calendar" | "notes" | "settings"
 function viewFromHash(): View {
   const view = location.hash.slice(1)
-  return view === "add" ? "records" : view === "records" || view === "calendar" || view === "notes" || view === "settings" ? view : "overview"
+  return view === "add" ? "records" : view === "search" || view === "records" || view === "calendar" || view === "notes" || view === "settings" ? view : "overview"
 }
 
 function Options() {
@@ -162,7 +166,7 @@ function Options() {
       setEditing(following); setEditingReview(!!following); setNotice("기록을 수정했습니다.")
     })
   }
-  const reviewButton = (reviewRecords.length > 0 || view === "records" && reviewOnly) && <button className="btn review-button" aria-pressed={view === "records" && reviewOnly} onClick={openReview}><span className="review-alert" aria-hidden="true">!</span>상태 확인 {reviewRecords.length}</button>
+  const reviewButton = (reviewRecords.length > 0 || view === "records" && reviewOnly) && <Button variant="outline" className="review-button" aria-pressed={view === "records" && reviewOnly} onClick={openReview}><span className="review-alert" aria-hidden="true">!</span>상태 확인 {reviewRecords.length}</Button>
 
   async function importFile(file: File | undefined, kind: "backup" | "profile") {
     if (!file) return
@@ -180,7 +184,7 @@ function Options() {
       }
     })
   }
-  const viewLabel = ({ overview: "대시보드", records: "지원 기록", calendar: "취업 캘린더", notes: "메모", settings: "설정" } as const)[view]
+  const viewLabel = ({ overview: "대시보드", search: "공고 통합검색", records: "지원 기록", calendar: "취업 캘린더", notes: "메모", settings: "설정" } as const)[view]
   const title = view === "overview" ? "지원 현황" : viewLabel
 
   return <EventKindsProvider config={planner.eventKindConfig}><div className="app-shell">
@@ -188,33 +192,34 @@ function Options() {
       <Brand /><div className="nav-label">워크스페이스</div>
       <nav aria-label="주 메뉴">{([
         { id: "overview", label: "대시보드", icon: "grid" },
+        { id: "search", label: "공고 통합검색", icon: "search" },
         { id: "records", label: "지원 기록", icon: "list" },
         { id: "calendar", label: "취업 캘린더", icon: "calendar" },
         { id: "notes", label: "메모", icon: "note" },
         { id: "settings", label: "설정", icon: "settings" }
-      ] as const).map(item => <button key={item.id} className={`nav-item${item.id === "settings" ? " nav-item-settings" : ""}${view === item.id ? " active" : ""}`} onClick={() => navigate(item.id)} aria-current={view === item.id ? "page" : undefined}>
+      ] as const).map(item => <Button variant="unstyled" key={item.id} className={`nav-item${item.id === "settings" ? " nav-item-settings" : ""}${view === item.id ? " active" : ""}`} onClick={() => navigate(item.id)} aria-current={view === item.id ? "page" : undefined}>
         <Icon name={item.icon} size={17} />{item.label}{item.id === "records" && <span className="nav-count">{records.length}</span>}
-      </button>)}</nav>
+      </Button>)}</nav>
     </aside>
 
-    <main className={`workspace${view === "settings" ? " settings-workspace" : ""}`} aria-busy={busy}>
+    <main className={`workspace${view === "settings" ? " settings-workspace" : ""}${view === "search" ? " search-workspace" : ""}`} aria-busy={busy}>
       {view !== "overview" && <div className="topbar"><span>워크스페이스 / {viewLabel}</span></div>}
       <div className={`page-heading${view === "overview" ? " dashboard-heading" : ""}`}>
-        {view === "overview" ? <DashboardHero /> : <div><h1>{title}</h1><p>{view === "settings" ? "화면, 수집 방식과 내 데이터를 관리해요." : view === "calendar" ? "다가오는 면접과 마감일, 준비할 일을 챙겨요." : view === "notes" ? "기업 조사부터 면접 복기까지, 기억할 내용을 모아요." : "기업과 직무로 검색하고 지원 기록을 관리합니다."}</p></div>}
+        {view === "overview" ? <DashboardHero /> : <div><h1>{title}</h1><p>{view === "search" ? "여러 사이트의 채용공고를 한 화면에서 찾아봐요." : view === "settings" ? "화면, 수집 방식과 내 데이터를 관리해요." : view === "calendar" ? "다가오는 면접과 마감일, 준비할 일을 챙겨요." : view === "notes" ? "기업 조사부터 면접 복기까지, 기억할 내용을 모아요." : "기업과 직무로 검색하고 지원 기록을 관리합니다."}</p></div>}
         {view === "settings" && <span className="settings-save-hint"><Icon name="check" size={13} />변경 사항은 자동으로 저장돼요</span>}
-        {view === "notes" && <button className="btn primary" disabled={!snapshot} onClick={() => openNote()}>+ 메모 작성</button>}
-        {view === "overview" && <div className="heading-actions">{reviewButton}<button className="btn" onClick={() => navigate("records")}>지원 기록 관리<Icon name="arrow" size={15} /></button></div>}
+        {view === "notes" && <Button variant="default" disabled={!snapshot} onClick={() => openNote()}>+ 메모 작성</Button>}
+        {view === "overview" && <div className="heading-actions">{reviewButton}<Button variant="outline" onClick={() => navigate("records")}>지원 기록 관리<Icon name="arrow" size={15} /></Button></div>}
         {view === "records" && <div className="heading-actions">
           {reviewButton}
-          <button className="btn primary" onClick={() => setAdding(true)}>+ 직접 추가</button>
-          <button className="btn" disabled={busy || !snapshot} onClick={() => download(`오늘시작-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(filtered), "text/csv;charset=utf-8")}><Icon name="download" size={15} />CSV 내보내기</button>
+          <Button variant="default" onClick={() => setAdding(true)}>+ 직접 추가</Button>
+          <Button variant="outline" disabled={busy || !snapshot} onClick={() => download(`오늘시작-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(filtered), "text/csv;charset=utf-8")}><Icon name="download" size={15} />CSV 내보내기</Button>
         </div>}
       </div>
       {error && <div className="toast"><Notice error>{error}</Notice></div>}
       {notice && <div className="toast"><Notice>{notice}</Notice></div>}
-      {!noteEditor && !eventEditor && drafts.length > 0 && <section className="planner-recovery" aria-label="임시 저장한 작성 내용"><h2>이어서 작성해요</h2>{drafts.map(draft => <div key={draft.key}><button className="text-btn" onClick={() => resumeDraft(draft)}>{draft.kind === "note" ? "메모" : "일정"} · {draft.value.title || "제목 없음"} 이어쓰기</button><button className="icon-btn" aria-label={`${draft.value.title || "제목 없는 작성 내용"} 임시 저장 삭제`} onClick={() => removePlannerDraft(draft)}><Icon name="close" size={14} /></button></div>)}</section>}
+      {!noteEditor && !eventEditor && drafts.length > 0 && <section className="planner-recovery" aria-label="임시 저장한 작성 내용"><h2>이어서 작성해요</h2>{drafts.map(draft => <div key={draft.key}><Button variant="link" className="text-btn" onClick={() => resumeDraft(draft)}>{draft.kind === "note" ? "메모" : "일정"} · {draft.value.title || "제목 없음"} 이어쓰기</Button><Button variant="ghost" size="icon" className="icon-btn" aria-label={`${draft.value.title || "제목 없는 작성 내용"} 임시 저장 삭제`} onClick={() => removePlannerDraft(draft)}><Icon name="close" size={14} /></Button></div>)}</section>}
 
-      {view === "settings" && settings ? <SettingsPage settings={settings} busy={busy} ready={!!snapshot} action={action} onSettingsChange={updateSettings} onProfileImport={() => profileInput.current?.click()} onBackupImport={() => backupInput.current?.click()} onReset={() => { setResetError(""); setResetting(true) }} /> : view === "overview" ? <>
+      {view === "search" ? <JobSearch records={records} /> : view === "settings" && settings ? <SettingsPage settings={settings} busy={busy} ready={!!snapshot} action={action} onSettingsChange={updateSettings} onProfileImport={() => profileInput.current?.click()} onBackupImport={() => backupInput.current?.click()} onReset={() => { setResetError(""); setResetting(true) }} /> : view === "overview" ? <>
         <div className="dashboard-overview-top">
           <DashboardSummary records={dashboardRecords} source={activeDashboardSource} />
           <DashboardImports ready={!!snapshot} consent={settings?.consent} collectingPlatform={snapshot?.historyRun?.status === "running" ? snapshot.historyRun.platform : undefined} />
@@ -228,12 +233,12 @@ function Options() {
         {!reviewOnly && <RecordImports ready={!!snapshot} records={records} consent={settings?.consent} reports={snapshot?.reports} completions={snapshot?.historyCompletions} run={snapshot?.historyRun} />}
 
         <div className="section-heading"><h2>지원 기록</h2><span className="small muted">{lastReport ? `최근 수집 ${formatTime(lastReport.at)}` : "수집 이력 없음"}</span></div>
-        <section className="card">
-          <div className="table-tabs">{(["all", ...applicationSources] as const).map(p => <button key={p} className={`table-tab ${platform === p ? "active" : ""}`} onClick={() => setPlatform(p)}>{p === "all" ? "전체" : platformLabel[p]}<span>{p === "all" ? records.length : counts[p]}</span></button>)}</div>
-          <div className="table-tools"><label className="search-box"><Icon name="search" size={16} /><input placeholder="기업명 또는 직무 검색" aria-label="기업명 또는 직무 검색" value={query} onChange={e => setQuery(e.target.value)} /></label></div>
+        <Card asChild><section className="card">
+          <div className="table-tabs">{(["all", ...applicationSources] as const).map(p => <Button variant="unstyled" key={p} className={`table-tab ${platform === p ? "active" : ""}`} onClick={() => setPlatform(p)}>{p === "all" ? "전체" : platformLabel[p]}<span>{p === "all" ? records.length : counts[p]}</span></Button>)}</div>
+          <div className="table-tools"><label className="search-box"><Icon name="search" size={16} /><Input placeholder="기업명 또는 직무 검색" aria-label="기업명 또는 직무 검색" value={query} onChange={e => setQuery(e.target.value)} /></label></div>
           {sort.key === "appliedAt" && <p className="record-order-note">지원 날짜와 확인된 제출 시각 기준이에요. 시각이 없는 기록은 추가된 순서로, 지원일 미확인 기록은 아래에 표시해요.</p>}
           {snapshot ? <RecordTable records={filtered} total={records.length} sort={sort} onSort={sortByColumn} onEdit={record => editRecord(record)} onStatusEdit={record => editRecord(record, requiresStatusReview(record), true)} onDelete={record => { setDeleting(record); setDeleteLinked(false) }} onDetails={record => setDetail(planner.links.find(link => link.recordId === record.id)?.id)} noteCounts={noteCounts} onAdd={() => setAdding(true)} showImportActions={false} pageKey={JSON.stringify([query, platform, reviewOnly, sort, settings?.showCancelled])} /> : <div className="empty"><p>지원 기록을 불러오는 중…</p></div>}
-        </section>
+        </section></Card>
       </>}
     </main>
     <HistoryRunStatus run={snapshot?.historyRun} toast visible={view === "overview" || view === "records"} />
@@ -241,8 +246,8 @@ function Options() {
     {detail && linkedRecord(detail, records, planner.links) && <RecordDetails key={detail} record={linkedRecord(detail, records, planner.links)!} linkId={detail} planner={planner} onClose={() => setDetail(undefined)} onNote={note => openNote(note, detail, detail)} onEvent={event => openEvent(event, undefined, detail, detail)} />}
     {eventEditor && <EventEditor key={eventEditor.initial.id} initial={eventEditor.initial} recovered={eventEditor.recovered} records={records} links={planner.links} generation={snapshot?.dataGeneration} onClose={(reason, message) => { const link = eventEditor.returnLinkId; setEventEditor(undefined); if (reason !== "outside" && link) setDetail(link); if (message) setNotice(message) }} />}
 
-    <input hidden ref={backupInput} type="file" accept=".json,application/json" aria-label="JSON 백업 파일" onChange={e => { void importFile(e.target.files?.[0], "backup"); e.target.value = "" }} />
-    <input hidden ref={profileInput} type="file" accept=".json,application/json" aria-label="선택자 JSON 파일" onChange={e => { void importFile(e.target.files?.[0], "profile"); e.target.value = "" }} />
+    <Input hidden ref={backupInput} type="file" accept=".json,application/json" aria-label="JSON 백업 파일" onChange={e => { void importFile(e.target.files?.[0], "backup"); e.target.value = "" }} />
+    <Input hidden ref={profileInput} type="file" accept=".json,application/json" aria-label="선택자 JSON 파일" onChange={e => { void importFile(e.target.files?.[0], "profile"); e.target.value = "" }} />
 
     {adding && <ManualApplicationForm key={manualInitial?.submissionAttemptId || "manual"} initial={manualInitial} generation={snapshot?.dataGeneration} onClose={() => { setAdding(false); setManualInitial(undefined); if (location.hash === "#add") navigate("records") }} onSaved={() => { setAdding(false); setManualInitial(undefined); setNotice("지원 기록을 추가했습니다."); if (location.hash === "#add") navigate("records"); void load().catch(error => setError(error.message)) }} />}
     {editing && <RecordEditDialog record={editing} review={editingReview} focusStatus={editingStatus} hasNext={reviewRecords.some(record => record.id !== editing.id)} busy={busy} onChange={setEditing} onClose={() => setEditing(undefined)} onSave={saveEditing} />}

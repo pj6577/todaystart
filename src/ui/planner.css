@@ -3,13 +3,12 @@
 .planner-tabs button { padding: 8px 12px; font-size: 12px; white-space: nowrap; border-radius: 5px; color: var(--text-muted); }
 .planner-tabs button[aria-pressed="true"] { color: var(--text); background: var(--surface); box-shadow: 0 1px 3px #00000012; }
 .planner-tabs button:hover { color: var(--text); }
-.planner-backdrop { position: fixed; inset: 0; z-index: 60; background: var(--overlay); display: flex; justify-content: flex-end; }
 .planner-drawer { width: min(560px, 100vw); height: 100dvh; background: var(--surface); border-left: 1px solid var(--border); overflow-y: auto; overscroll-behavior: contain; padding: 28px; box-shadow: var(--shadow); }
 .planner-drawer.wide { width: min(680px, 100vw); }
 .planner-drawer-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; position: sticky; top: -28px; margin: -28px -28px 18px; padding: 20px 28px; z-index: 2; border-bottom: 1px solid var(--border); background: var(--surface); }
 .planner-drawer-heading h2 { font-size: 17px; }
 .planner-field { display: block; margin: 20px 0 10px; font-size: 12px; color: var(--text-secondary); }
-.planner-field input, .planner-field select, .planner-field textarea, .checklist-add input { width: 100%; min-width: 0; margin-top: 8px; padding: 11px 12px; border: 1px solid var(--border-strong); border-radius: 7px; background: var(--surface); color: var(--text); font: inherit; font-size: 13px; }
+.planner-field .ui-input, .checklist-add .ui-input { margin-top: 8px; font-size: 13px; }
 .planner-field textarea { resize: vertical; min-height: 130px; line-height: 1.8; }
 .planner-field select { text-overflow: ellipsis; }
 .planner-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -27,7 +26,7 @@
 .planner-editor-footer > div { display: flex; gap: 8px; margin-left: auto; }
 .planner-delete-confirm { padding: 16px; border: 1px solid var(--border-strong); border-radius: 8px; margin-top: 20px; }
 .planner-delete-confirm p { margin-bottom: 14px; font-size: 13px; }
-.planner-delete-confirm .btn + .btn { margin-left: 8px; }
+.planner-delete-confirm [data-slot="button"]:not([data-variant="unstyled"]) + [data-slot="button"]:not([data-variant="unstyled"]) { margin-left: 8px; }
 .planner-inline-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
 .planner-error { margin-bottom: 16px; }
 .planner-recovery { margin-bottom: 24px; padding: 16px 20px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
@@ -37,7 +36,7 @@
 .planner-link { color: var(--link); font-size: 12px; text-decoration: underline; }
 .note-save-status { color: var(--text-muted); font-size: 11px; }
 .note-templates { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
-.note-templates .btn { padding: 6px 10px; font-size: 11px; min-height: 30px; }
+.note-templates [data-slot="button"]:not([data-variant="unstyled"]) { padding: 6px 10px; font-size: 11px; min-height: 30px; }
 .notes-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .notes-grid { align-items: start; }
 [data-note-color="yellow"] { --note-paper: #f5f3ee; --note-edge: #d7d3c9; --note-ink: #302f2b; --note-muted: #67645d; }
@@ -66,8 +65,8 @@
 .sticky-sheet .note-title-field input::placeholder, .sticky-sheet .note-mention-input textarea::placeholder { color: var(--note-muted); opacity: .85; }
 .sticky-sheet .note-mention-input textarea { font-size: 14px; line-height: 1.9; min-height: 240px; margin-top: 0; }
 .sticky-sheet .note-templates { margin-top: 0; }
-.sticky-sheet .note-templates .btn { border-color: var(--note-edge); background: transparent; color: var(--note-muted); }
-.sticky-sheet .note-templates .btn:disabled { opacity: .5; }
+.sticky-sheet .note-templates [data-slot="button"]:not([data-variant="unstyled"]) { border-color: var(--note-edge); background: transparent; color: var(--note-muted); }
+.sticky-sheet .note-templates [data-slot="button"]:not([data-variant="unstyled"]):disabled { opacity: .5; }
 .sticky-sheet .planner-checklist { margin-bottom: 0; }
 .sticky-sheet .checklist-add input { background: color-mix(in srgb, var(--note-paper) 75%, var(--surface)); color: var(--note-ink); border-color: var(--note-edge); }
 .sticky-sheet .checklist-item .done { color: var(--note-muted); }
@@ -95,14 +94,14 @@
 .sticky-note-editor .note-title-field { margin-top: 12px; }
 .sticky-note-editor .note-title-field input { font-size: 19px; }
 .sticky-note-editor .note-templates { gap: 4px; }
-.sticky-note-editor .note-templates .btn { font-size: 10px; padding: 4px 7px; min-height: 25px; }
+.sticky-note-editor .note-templates [data-slot="button"]:not([data-variant="unstyled"]) { font-size: 10px; padding: 4px 7px; min-height: 25px; }
 .sticky-note-editor .note-mention-input textarea { min-height: 180px; }
 .sticky-note-editor .note-mention-hint { font-size: 10px; }
 .sticky-note-editor .note-mention-hint > span { display: none; }
 .sticky-note-editor .planner-checklist { margin-top: 16px; }
 .sticky-note-editor .checklist-add { gap: 6px; }
 .sticky-note-editor .checklist-add input { width: 0; font-size: 11px; padding: 9px; }
-.sticky-note-editor .checklist-add .btn { font-size: 10px; padding: 6px; }
+.sticky-note-editor .checklist-add [data-slot="button"]:not([data-variant="unstyled"]) { font-size: 10px; padding: 6px; }
 .sticky-note-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--note-edge); margin-top: 18px; padding-top: 10px; }
 .sticky-note-footer .note-save-status { flex: 1; }
 .sticky-note-options .note-templates { margin-top: 12px; }

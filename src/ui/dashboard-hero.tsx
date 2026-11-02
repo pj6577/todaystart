@@ -1,3 +1,4 @@
+import { Button } from "./primitives/button"
 import React, { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from "react"
 import { recruitmentBrands } from "./recruitment-brands"
 
@@ -64,11 +65,11 @@ function RecordSites() {
   return <span className="dashboard-record-cluster" ref={wrapper}
     onPointerEnter={event => { if (event.pointerType !== "touch") setOpen(true) }}
     onPointerLeave={event => { if (event.pointerType !== "touch") setOpen(false) }}>
-    <button type="button" className="dashboard-record-trigger" aria-label="채용 사이트 심벌 보기"
+    <Button variant="unstyled" type="button" className="dashboard-record-trigger" aria-label="채용 사이트 심벌 보기"
       aria-expanded={open} aria-controls={id} aria-describedby={open ? id : undefined}
       onClick={() => setOpen(current => !current)}
       onFocus={event => { if (event.currentTarget.matches(":focus-visible")) setOpen(true) }}
-      onBlur={() => setOpen(false)}><RecordPill /></button>
+      onBlur={() => setOpen(false)}><RecordPill /></Button>
     <span id={id} ref={cloud} className="dashboard-platform-bubbles" role="tooltip" aria-hidden={!open} data-open={open}
       style={{ "--bubble-shift": `${shift}px` } as CSSProperties}>
       {recruitmentBrands.filter(brand => ["saramin", "jobkorea", "wanted"].includes(brand.id)).map((brand, index) => <span className="dashboard-site-bubble" key={brand.id}

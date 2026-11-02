@@ -25,6 +25,3 @@ export function Brand() { return <div className="brand"><img className="brand-ma
 export function PlatformTag({ platform, label }: { platform: ApplicationSource; label?: string }) { return <span className={`platform-tag ${platform}`}>{sourceLabel({ platform, sourceLabel: label })}</span> }
 export function Sentences({ children }: { children: string }) { return <span className="sentence-lines">{sentenceLines(children)}</span> }
 export function Notice({ children, error = false }: { children: ReactNode; error?: boolean }) { return <div className={`notice sentence-lines ${error ? "error" : ""}`} role={error ? "alert" : "status"}>{typeof children === "string" ? sentenceLines(children) : children}</div> }
-export function Toggle({ label, detail, checked, onChange, disabled = false }: { label: string; detail: string; checked: boolean; onChange: () => void; disabled?: boolean }) {
-  return <div className="toggle-row"><div><strong>{label}</strong><p><Sentences>{detail}</Sentences></p></div><button className={`toggle ${checked ? "on" : ""}`} role="switch" aria-label={label} aria-checked={checked} onClick={onChange} disabled={disabled}><span /></button></div>
-}

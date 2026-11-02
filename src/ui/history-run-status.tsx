@@ -1,3 +1,4 @@
+import { Button } from "./primitives/button"
 import React, { useCallback, useEffect, useState } from "react"
 import type { HistoryRun } from "../collection/history-run-model"
 import { rpc } from "../messaging/protocol"
@@ -55,9 +56,9 @@ export function HistoryRunStatus({ run, toast = false, visible = true }: { run?:
     onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocused(false) }}>
     <span className="collection-notice-icon" aria-hidden="true">{collecting ? <span className="collection-spinner" /> : notice.tone === "success" ? <Icon name="check" size={18} /> : notice.tone === "warning" ? <span>!</span> : <Icon name="download" size={18} />}</span>
     <div className="collection-notice-copy"><h2>{notice.title}</h2><p>{error || notice.message}</p><small>{notice.detail}</small>
-      {collecting ? <button className="text-btn collection-notice-action" onClick={() => void rpc({ type: "history_run", operation: "stop" }).catch(() => setError("중지하지 못했어요. 잠시 후 다시 눌러 주세요."))}>중지</button>
-        : notice.action && <button className="text-btn collection-notice-action" onClick={() => void (notice.action === "settings" ? openManagement("settings").catch(() => setError("설정을 열지 못했어요. 왼쪽 메뉴에서 설정을 열어 주세요.")) : openSite())}>{notice.action === "settings" ? "설정 열기" : `${platformLabel[run.platform]} 열기`}<Icon name="external" size={12} /></button>}
+      {collecting ? <Button variant="link" className="text-btn collection-notice-action" onClick={() => void rpc({ type: "history_run", operation: "stop" }).catch(() => setError("중지하지 못했어요. 잠시 후 다시 눌러 주세요."))}>중지</Button>
+        : notice.action && <Button variant="link" className="text-btn collection-notice-action" onClick={() => void (notice.action === "settings" ? openManagement("settings").catch(() => setError("설정을 열지 못했어요. 왼쪽 메뉴에서 설정을 열어 주세요.")) : openSite())}>{notice.action === "settings" ? "설정 열기" : `${platformLabel[run.platform]} 열기`}<Icon name="external" size={12} /></Button>}
     </div>
-    {!collecting && <button className="icon-btn collection-dismiss" aria-label="수집 안내 닫기" onClick={() => void dismiss()}><Icon name="close" size={16} /></button>}
+    {!collecting && <Button variant="ghost" size="icon" className="icon-btn collection-dismiss" aria-label="수집 안내 닫기" onClick={() => void dismiss()}><Icon name="close" size={16} /></Button>}
   </section>
 }
