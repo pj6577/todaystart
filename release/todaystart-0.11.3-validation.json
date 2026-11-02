@@ -1,0 +1,33 @@
+{
+  "file": "release/todaystart-0.11.3.zip",
+  "version": "0.11.3",
+  "sourceCommit": "ffd7b78395a29acb537e744a606c0e50ae40bd71",
+  "bytes": 2781189,
+  "files": 46,
+  "sha256": "b2b6845a406b040c72b8d8d58089b386c46e0fe2eb6e53f830268d714c849f2f",
+  "archiveIntegrity": "passed",
+  "buildBytesMatch": true,
+  "manifestResourcesPresent": true,
+  "permissionsUnchanged": true,
+  "permissionsComparedWith": "0.11.2",
+  "contentRegistrationsUnchanged": true,
+  "licensesIncluded": true,
+  "excludedHistoricalAssets": true,
+  "secretPatternMatches": [],
+  "sourcePatternAudit": {
+    "trackedTextFiles": 350,
+    "matches": []
+  },
+  "validation": {
+    "typecheck": "passed",
+    "build": "passed",
+    "unitTests": 610,
+    "failedUnitTests": 0,
+    "browserTests": "not run at user request; user will review the screen",
+    "livePublicHttp": "Wanted keyword/category intersection and two-page native condition requests passed"
+  },
+  "limitations": [
+    "Public HTTP checks do not guarantee connectivity from every Chrome extension environment",
+    "Wanted uses native taxonomy and experience semantics; 20 means 20+ and career-any maps to all"
+  ]
+}
