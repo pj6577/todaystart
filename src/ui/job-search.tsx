@@ -14,7 +14,7 @@ import { JobSearchHistoryDialog } from "./job-search-history-dialog"
 import { useJobSearch } from "./use-job-search"
 import "./job-search.css"
 
-const failureLabels = { unreadable: "응답 확인 필요", blocked: "접근 제한", login_required: "로그인 필요", timeout: "응답 지연", error: "요청 실패", unsupported: "조건 검색 연결 전" }
+const failureLabels = { unreadable: "응답 확인 필요", blocked: "접근 제한", login_required: "로그인 필요", timeout: "응답 지연", error: "요청 실패" }
 
 export function JobSearch({ records }: { records: ApplicationRecord[] }) {
   const [initial] = useState(readSearchPreferences)
@@ -29,6 +29,7 @@ export function JobSearch({ records }: { records: ApplicationRecord[] }) {
   const [historyCompany, setHistoryCompany] = useState<{ name: string; key: string }>()
   const sentinel = useRef<HTMLDivElement>(null)
   const lastAutoLoad = useRef("")
+  const emptyAutoLoads = useRef(0)
   const { sites, feed, paused, search, stop, clear, retry, loadMore, moreSites, busy } = useJobSearch()
   const history = useMemo(() => applicationHistoryIndex(records), [records])
   const availableJobs = useMemo(() => excludeApplied ? feed.filter(job => !history.has(searchCompanyNameKey(job.companyName))) : feed, [feed, history, excludeApplied])
@@ -46,12 +47,17 @@ export function JobSearch({ records }: { records: ApplicationRecord[] }) {
     // The observer may still report the empty/loading layout for one frame.
     // Recheck the rendered sentinel before starting another network batch.
     const bounds = sentinel.current?.getBoundingClientRect()
-    const progress = `${filter}:${excludeApplied}:${jobs.length}`
-    if (nearEnd && bounds && bounds.top <= window.innerHeight + 240 && bounds.bottom >= 0 && !busy && !paused && hasMore && jobs.length > 0 && lastAutoLoad.current !== progress) {
+    const matching = sites.find(site => site.platform === "wanted" && site.matching && site.hasNext && (filter === "all" || filter === "wanted"))
+    const progress = `${filter}:${excludeApplied}:${jobs.length}:${matching?.page ?? ""}`
+    // A comparison batch without matches is still progress, not a zero-result
+    // search. Continue a few batches; keep a manual continuation after the cap.
+    const canContinue = matching ? emptyAutoLoads.current < 3 && (!excludeApplied || feed.length === 0) : jobs.length > 0
+    if (nearEnd && bounds && bounds.top <= window.innerHeight + 240 && bounds.bottom >= 0 && !busy && !paused && hasMore && canContinue && lastAutoLoad.current !== progress) {
       lastAutoLoad.current = progress
+      emptyAutoLoads.current = matching ? emptyAutoLoads.current + 1 : 0
       loadMore(filter)
     }
-  }, [nearEnd, busy, paused, hasMore, loadMore, filter, excludeApplied, jobs.length])
+  }, [nearEnd, busy, paused, hasMore, loadMore, filter, excludeApplied, jobs.length, sites, feed.length])
 
   function remember(filters: SearchFilters, platforms: SearchPlatform[], keyword = query.trim()) {
     const preferences: SearchPreferences = { query: keyword, filters, sites: platforms, excludeApplied }
@@ -62,7 +68,7 @@ export function JobSearch({ records }: { records: ApplicationRecord[] }) {
     const keyword = query.trim()
     if ((!keyword && !hasSearchFilters(filters)) || keyword.length > searchLimits.queryLength || !platforms.length) { setValidation("검색어 또는 검색 조건과 검색할 사이트를 선택해 주세요."); return }
     remember(filters, platforms, keyword)
-    setFilter("all"); setValidation(""); lastAutoLoad.current = ""
+    setFilter("all"); setValidation(""); lastAutoLoad.current = ""; emptyAutoLoads.current = 0
     search({ query: keyword, filters: { ...filters } }, platforms)
   }
   function applyFilters(filters: SearchFilters, platforms: SearchPlatform[]) {
@@ -94,7 +100,7 @@ export function JobSearch({ records }: { records: ApplicationRecord[] }) {
         return <Button variant="outline" key={platform} data-search-platform={platform} data-search-status={platform === "all" ? undefined : sites.find(site => site.platform === platform)!.status} data-result-count={count} aria-pressed={filter === platform} onClick={() => setFilter(platform)}>{platform !== "all" && <PlatformSymbol platform={platform} />}{platform === "all" ? "전체" : platformLabel[platform]}</Button>
       })}</nav>
       {busy && <Button variant="ghost" onClick={stop}><Icon name="close" size={14} />검색 중지</Button>}</div>
-      {!!failures.length && <div className="job-search-failures">{failures.map(site => <div className="job-search-failure" key={site.platform} role="status" aria-label={`${platformLabel[site.platform]} 검색 문제`} title={site.message}><span>{platformLabel[site.platform]} · {failureLabels[site.status as keyof typeof failureLabels]}</span>{site.status !== "unsupported" && <Button variant="link" size="sm" disabled={busy} onClick={() => retry(site)}>다시 시도</Button>}</div>)}</div>}
+      {!!failures.length && <div className="job-search-failures">{failures.map(site => <div className="job-search-failure" key={site.platform} role="status" aria-label={`${platformLabel[site.platform]} 검색 문제`} title={site.message}><span>{platformLabel[site.platform]} · {failureLabels[site.status as keyof typeof failureLabels]}</span><Button variant="link" size="sm" disabled={busy} onClick={() => retry(site)}>다시 시도</Button></div>)}</div>}
     </>}
 
     {jobs.length ? <div className="job-search-results">{jobs.map(job => {
@@ -104,7 +110,7 @@ export function JobSearch({ records }: { records: ApplicationRecord[] }) {
         <p className="job-search-company">{job.companyName}</p><h3><a href={job.jobUrl} target="_blank" rel="noreferrer">{job.jobTitle}<Icon name="external" size={14} /></a></h3>
         <div className="job-search-card-meta">{job.location && <span>{job.location}</span>}{job.career && <span>{job.career}</span>}{job.deadline && <span>{job.deadline}</span>}</div>
       </article></Card>
-    })}</div> : <div className="job-search-empty"><div className="empty-symbol"><Icon name="search" size={28} /></div><h2>{!sites.length ? "어떤 기회를 찾고 있나요?" : busy ? "공고를 찾고 있어요" : excludeApplied && feed.length ? "지원 이력이 없는 기업의 공고가 없어요" : "검색 결과가 없어요"}</h2>{!sites.length && <p>직군과 지역을 고르거나, 검색어로 공고를 찾아보세요.</p>}</div>}
+    })}</div> : <div className="job-search-empty"><div className="empty-symbol"><Icon name="search" size={28} /></div><h2>{!sites.length ? "어떤 기회를 찾고 있나요?" : busy ? "공고를 찾고 있어요" : excludeApplied && feed.length ? "지원 이력이 없는 기업의 공고가 없어요" : hasMore ? "조건에 맞는 공고를 더 확인할 수 있어요" : "검색 결과가 없어요"}</h2>{!sites.length && <p>직군과 지역을 고르거나, 검색어로 공고를 찾아보세요.</p>}</div>}
 
     <div className="job-search-scroll-end" ref={sentinel} hidden={!sites.length}>
       <p role="status" aria-live="polite">{busy ? "공고를 가져오는 중…" : paused ? "검색을 중지했어요" : !hasMore && jobs.length ? "현재 검색 결과의 끝이에요" : ""}</p>

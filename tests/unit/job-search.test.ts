@@ -127,11 +127,12 @@ describe("직접 요청 통합검색", () => {
     expect(any.searchParams.get("exp_none")).toBe("y")
     expect(any.searchParams.has("exp_cd")).toBe(false)
   })
-  it("원티드가 지원하지 않는 조건은 무시하지 않고 조회하지 않는다", async () => {
-    const request = vi.fn()
+  it("원티드의 검색어와 직군 조건은 두 서버 응답의 공고 ID를 대조한다", async () => {
+    const request = vi.fn().mockImplementation(() => Promise.resolve(utf8(JSON.stringify({ data: [row(1)] }))))
     const result = await requestSearchPage("wanted", "React", 1, signal(), request, { ...defaultSearchFilters, group: ["design"] })
-    expect(result.status).toBe("unsupported")
-    expect(request).not.toHaveBeenCalled()
+    expect(result.status).toBe("ok")
+    expect(result.jobs).toHaveLength(1)
+    expect(request).toHaveBeenCalledTimes(2)
   })
   it("정의하지 않은 코드와 배열이 아닌 조건을 거절한다", () => {
     expect(() => searchUrls("saramin", "React", 1, { ...defaultSearchFilters, role: ["evil"] } as never)).toThrow()
@@ -194,10 +195,11 @@ describe("직접 요청 통합검색", () => {
     expect(() => searchUrls("saramin", "React", 1, { ...defaultSearchFilters, ...invalid })).toThrow()
     expect(() => searchUrls("jobkorea", "React", 1, { ...defaultSearchFilters, ...invalid })).toThrow()
   })
-  it("원티드는 연차만 선택한 검색도 무시하지 않고 연결 전 상태로 구분한다", async () => {
-    const request = vi.fn()
-    expect((await requestSearchPage("wanted", "React", 1, signal(), request, { ...defaultSearchFilters, careerMax: 3 })).status).toBe("unsupported")
-    expect(request).not.toHaveBeenCalled()
+  it("원티드의 검색어와 연차 조건을 한 번의 서버 요청으로 전달한다", async () => {
+    const request = vi.fn().mockResolvedValue(utf8(JSON.stringify({ data: [row(1)] })))
+    expect((await requestSearchPage("wanted", "React", 1, signal(), request, { ...defaultSearchFilters, careerMax: 3 })).status).toBe("ok")
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(new URL(request.mock.calls[0]![0]).searchParams.getAll("years")).toEqual(["1", "2", "3"])
   })
   it("최소 신입을 두 사이트의 신입 포함 조건으로 연결하고 신입 해제와 양의 최소 연차를 동기화한다", () => {
     const filters = setSearchCareerRange({ ...defaultSearchFilters, career: ["experienced"], careerMin: 2, careerMax: 3 }, "careerMin", 0)

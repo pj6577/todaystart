@@ -38,6 +38,20 @@ export const rememberPostingProfile: PostingPageProfile = {
   }
 }
 
+// User-supplied Wanted /wdlist cards, 2026-11-02. Attribute names are stable
+// across CSS-module hashes. Mount outside the navigation link and bookmark.
+// Observing this list also catches cards appended by infinite scrolling.
+export const wantedListingPostingProfile: PostingPageProfile = {
+  root: '[data-cy="job-list"]',
+  posting: '[data-cy="job-card"]',
+  requireJobId: true,
+  fields: {
+    company: { selector: '[data-company-name][data-position-id]', attribute: "data-company-name" },
+    title: { selector: '[data-position-name][data-position-id]', attribute: "data-position-name" },
+    url: { selector: ':scope > a[href]', attribute: "href" }
+  }
+}
+
 // Observed in unauthenticated HTML on 2026-10-19. These profiles only read
 // publicly visible jobs; they do not assert anything about application history.
 export const publicPostingPages = {
@@ -112,8 +126,9 @@ export function publicPostingProfileFor(platform: Platform, url: string): Postin
     if (route === "/recruit/joblist") return publicPostingPages.jobkoreaList.profile
     if (route === "/search") return publicPostingPages.jobkoreaSearch.profile
     if (/^\/recruit\/gi_read\/\d+\/?$/.test(pathname)) return publicPostingPages.jobkoreaDetail.profile
-  } else if (platform === "wanted" && /^\/wd\/\d+\/?$/.test(pathname)) {
-    return publicPostingPages.wantedDetail.profile
+  } else if (platform === "wanted") {
+    if (/^\/wd\/\d+\/?$/.test(pathname)) return publicPostingPages.wantedDetail.profile
+    if (route === "/wdlist" || route.startsWith("/wdlist/")) return wantedListingPostingProfile
   } else if (platform === "remember" && new URL(url).hostname === "career.rememberapp.co.kr" && route === "/job/postings") {
     return rememberPostingProfile
   }

@@ -14,12 +14,13 @@ export interface SearchJob {
   deadline?: string
 }
 
-export type SearchStatus = "ok" | "empty" | "unreadable" | "blocked" | "login_required" | "timeout" | "error" | "cancelled" | "unsupported"
+export type SearchStatus = "ok" | "empty" | "unreadable" | "blocked" | "login_required" | "timeout" | "error" | "cancelled"
 export interface SearchPage {
   jobs: SearchJob[]
   hasNext: boolean
   status: SearchStatus
   message?: string
+  matching?: boolean
 }
 export interface SiteSearchResult extends SearchPage {
   platform: SearchPlatform

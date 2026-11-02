@@ -59,6 +59,7 @@ export function parseSearchHtml(platform: Exclude<SearchPlatform, "wanted">, htm
 const wantedRow = z.object({
   id: z.number().int().positive(), position: z.string().trim().min(1),
   company: z.object({ name: z.string().trim().min(1) }),
+  address: z.object({ location: z.string().nullable().optional(), district: z.string().nullable().optional() }).nullable().optional(),
   annual_from: z.number().nonnegative().nullable().optional(), annual_to: z.number().nonnegative().nullable().optional()
 })
 const wantedResponse = z.object({ data: z.array(z.unknown()), links: z.object({ next: z.string().nullable().optional() }).optional() })
@@ -70,10 +71,11 @@ export function parseWantedSearch(raw: unknown, page: number): SearchPage {
   for (const value of parsed.data.data.slice(0, searchLimits.rows)) {
     const row = wantedRow.safeParse(value)
     if (!row.success) continue
-    const { id, position, company, annual_from: from, annual_to: to } = row.data
+    const { id, position, company, address, annual_from: from, annual_to: to } = row.data
     const item = job("wanted", clean(company.name), clean(position), `https://www.wanted.co.kr/wd/${id}`, "https://www.wanted.co.kr/search")
     if (!item || seen.has(item.id)) continue
-    item.career = from === 0 && to === 0 ? "신입" : from != null && to != null ? `${from}~${to}년` : undefined
+    item.location = [address?.location, address?.district].map(value => clean(value)).filter(Boolean).join(" ") || undefined
+    item.career = from === 0 && to === 0 ? "신입" : from != null && to != null ? to >= 100 ? from === 0 ? "신입 이상" : `${from}년↑` : from === 0 ? `신입~${to}년` : `${from}~${to}년` : undefined
     seen.add(item.id); jobs.push(item)
   }
   const empty = parsed.data.data.length === 0

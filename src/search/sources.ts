@@ -1,6 +1,7 @@
 import { searchLimits, type SearchPlatform } from "./model"
 import { checkedSearchFilters, defaultSearchFilters, developmentRoles, hasSearchFilters, jobGroups, searchRegions, type SearchFilters } from "./filters"
 import jobkoreaGroups from "./jobkorea-groups.json"
+import { wantedSearchUrls } from "./wanted"
 
 export function searchUrls(platform: SearchPlatform, query: string, page = 1, selected: SearchFilters = defaultSearchFilters) {
   const filters = checkedSearchFilters(selected)
@@ -39,12 +40,5 @@ export function searchUrls(platform: SearchPlatform, query: string, page = 1, se
     return { searchUrl: url.href, requestUrl: url.href, format: "html" as const }
   }
   if (platform !== "wanted") throw new Error("지원하지 않는 검색 사이트입니다.")
-  const search = new URL("https://www.wanted.co.kr/search")
-  search.search = new URLSearchParams({ query: keyword, tab: "position" }).toString()
-  // The public search page loads its position list separately; no HTML execution or API key is needed.
-  // Observed in the page's search client on 2026-11-02. This is not the partner OpenAPI.
-  const request = new URL("https://www.wanted.co.kr/api/chaos/search/v1/position")
-  request.search = new URLSearchParams({ query: keyword, country: "kr", limit: "12", offset: String((page - 1) * 12) }).toString()
-  return { searchUrl: search.href, requestUrl: request.href, format: "json" as const,
-    unsupportedReason: hasSearchFilters(filters) ? "오늘시작의 원티드 직군·지역·경력 조건 연결이 아직 구현되지 않았어요. 현재는 키워드 검색만 이용할 수 있어요." : undefined }
+  return wantedSearchUrls(keyword, page, filters)
 }

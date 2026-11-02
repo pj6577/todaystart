@@ -27,6 +27,11 @@ async function mockSmallSearch() {
     await route.fulfill({ contentType: host.includes("wanted") ? "application/json" : "text/html; charset=utf-8", body: host.includes("saramin") ? saramin() : host.includes("jobkorea") ? jobkorea : JSON.stringify(wanted) })
   })
 }
+async function selectSaraminAndJobkorea() {
+  await ui.getByRole("button", { name: "검색 사이트", exact: true }).click()
+  await ui.getByRole("checkbox", { name: "원티드", exact: true }).uncheck()
+  await ui.getByRole("dialog", { name: "필터 선택", exact: true }).getByRole("button", { name: "적용", exact: true }).click()
+}
 async function chooseFilter(name: string, value: string) {
   const options = name === "직군" ? jobGroups : name === "개발 세부 직무" ? developmentRoles : name === "근무 지역" ? searchRegions : searchCareers
   const label = options.find(option => option.id === value)!.label
@@ -125,6 +130,7 @@ test("새 검색과 중지는 이전 응답이 현재 결과를 덮어쓰지 않
 })
 
 test("조건 선택·3열 가운데 정렬·무한 스크롤·기존 카드 위치와 검색 조건 유지", async () => {
+  await selectSaraminAndJobkorea()
   const requests: URL[] = []
   await context.route(/^https:\/\/www\.(saramin|jobkorea|wanted)\.co\.kr\//, async route => {
     const url = new URL(route.request().url()); requests.push(url)
@@ -141,8 +147,6 @@ test("조건 선택·3열 가운데 정렬·무한 스크롤·기존 카드 위�
   requests.length = 0
   await ui.getByRole("button", { name: "통합검색", exact: true }).click()
   await expect(ui.locator(".job-search-card")).toHaveCount(40)
-  await expect(ui.getByRole("status", { name: "원티드 검색 문제" })).toContainText("조건 검색 연결 전")
-  await expect(ui.getByRole("status", { name: "원티드 검색 문제" })).toHaveAttribute("title", /오늘시작의 원티드.*아직 구현되지/)
   await expect(ui.locator(".job-search-result-heading")).toHaveCount(0)
   await expect(resultFilter("전체")).toHaveText("전체")
   expect(requests).toHaveLength(2)
@@ -186,10 +190,13 @@ test("조건 선택·3열 가운데 정렬·무한 스크롤·기존 카드 위�
       search: document.querySelector(".job-search-input")!.getBoundingClientRect().left,
       condition: document.querySelector(".search-filter-trigger")!.getBoundingClientRect().left,
       checkbox: document.querySelector(".job-search-exclude input")!.getBoundingClientRect().left,
+      checkboxRight: document.querySelector(".job-search-exclude")!.getBoundingClientRect().right,
+      searchRight: document.querySelector(".job-search-input")!.getBoundingClientRect().right,
       overflow: document.documentElement.scrollWidth > window.innerWidth
     }))
     expect(Math.abs(positions.search - positions.condition)).toBeLessThanOrEqual(1)
-    expect(Math.abs(positions.search - positions.checkbox)).toBeLessThanOrEqual(1)
+    if (width === 1440) expect(Math.abs(positions.searchRight - positions.checkboxRight)).toBeLessThanOrEqual(1)
+    else expect(Math.abs(positions.search - positions.checkbox)).toBeLessThanOrEqual(1)
     expect(positions.overflow).toBe(false)
   }
   await ui.evaluate(() => window.scrollTo(0, 0))
@@ -428,13 +435,17 @@ test("패널에서 고르는 동안 요청하지 않고 적용·칩 해제 때�
   await panel.getByRole("radio", { name: "IT개발·데이터", exact: true }).locator("..").click()
   await panel.getByRole("checkbox", { name: "프론트엔드", exact: true }).locator("..").click()
   await panel.getByRole("button", { name: "적용", exact: true }).click()
-  await expect(ui.locator(".job-search-card")).toHaveCount(40)
-  expect(requests).toHaveLength(5)
-  expect(requests.slice(3).every(url => url.searchParams.get("cat_kewd") === "92" || url.searchParams.get("duty") === "1000230")).toBe(true)
+  await expect(ui.locator(".job-search-card")).toHaveCount(41)
+  expect(requests).toHaveLength(7)
+  expect(requests.slice(3).filter(url => !url.hostname.includes("wanted")).every(url => url.searchParams.get("cat_kewd") === "92" || url.searchParams.get("duty") === "1000230")).toBe(true)
+  const wantedRequests = requests.slice(3).filter(url => url.hostname.includes("wanted"))
+  expect(wantedRequests).toHaveLength(2)
+  expect(wantedRequests.find(url => url.pathname.includes("navigation"))!.searchParams.getAll("job_ids")).toEqual(["669"])
+  expect(wantedRequests.find(url => url.pathname.includes("search/v1"))!.searchParams.get("query")).toBe("React")
   await ui.getByRole("button", { name: "프론트엔드 조건 해제", exact: true }).click()
   await expect(ui.locator(".job-search-card")).toHaveCount(41)
-  expect(requests).toHaveLength(8)
-  expect(requests.slice(5).every(url => !url.searchParams.has("cat_kewd") && !url.searchParams.has("duty"))).toBe(true)
+  expect(requests).toHaveLength(10)
+  expect(requests.slice(7).every(url => !url.searchParams.has("cat_kewd") && !url.searchParams.has("duty") && !url.searchParams.has("job_ids"))).toBe(true)
 })
 
 test("모바일 통합 모달에서 지역을 검색하고 적용하거나 취소할 수 있다", async () => {
@@ -548,6 +559,7 @@ test("필터 버튼은 라이트·다크 모두 기본 배경과 hover 상태가
 })
 
 test("복수 직무·직군·지역·경력의 선택·해제·전체 전환과 추가 조회 조건을 유지한다", async () => {
+  await selectSaraminAndJobkorea()
   const requests: URL[] = []
   await context.route(/^https:\/\/www\.(saramin|jobkorea|wanted)\.co\.kr\//, async route => {
     const url = new URL(route.request().url()); requests.push(url)
@@ -626,6 +638,7 @@ test("복수 직무·직군·지역·경력의 선택·해제·전체 전환과 
 })
 
 test("신입~3년과 2~5년을 검색하고 범위 검증·취소·다음 조회·칩 해제를 연결한다", async () => {
+  await selectSaraminAndJobkorea()
   const requests: URL[] = []
   await context.route(/^https:\/\/www\.(saramin|jobkorea|wanted)\.co\.kr\//, async route => {
     const url = new URL(route.request().url()); requests.push(url)
