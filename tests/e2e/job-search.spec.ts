@@ -3,6 +3,7 @@ import path from "node:path"
 import { mkdirSync } from "node:fs"
 import { jobGroups, developmentRoles, searchRegions, searchCareers } from "../../src/search/filters"
 import { record } from "../helpers"
+import { jobSearchPreferencesKey } from "../../src/search/preferences"
 
 let context: BrowserContext, ui: Page
 test.beforeEach(async () => {
@@ -101,7 +102,7 @@ test("새 검색과 중지는 이전 응답이 현재 결과를 덮어쓰지 않
     if (query !== "fast") { held++; await new Promise<void>(resolve => releases.push(resolve)) }
     await route.fulfill({ contentType: "text/html; charset=utf-8", body: saramin([query === "fast" ? 501 : 999], query) }).catch(() => {})
   })
-  await ui.getByRole("button", { name: "조건 설정", exact: true }).click()
+  await ui.getByRole("button", { name: "검색 사이트", exact: true }).click()
   await ui.getByRole("checkbox", { name: "잡코리아" }).uncheck()
   await ui.getByRole("checkbox", { name: "원티드" }).uncheck()
   await ui.getByRole("dialog", { name: "필터 선택", exact: true }).getByRole("button", { name: "적용", exact: true }).click()
@@ -351,13 +352,13 @@ test("지원 이력 배지는 최근순 모달을 열며 많은 내역은 내부
   expect(await countRecords()).toBe(14)
 })
 
-test("조건 설정의 사이트 체크를 실제 검색 대상에 반영한다", async () => {
+test("검색 사이트의 사이트 체크를 실제 검색 대상에 반영한다", async () => {
   const requests: string[] = []
   await context.route(/^https:\/\/www\.(saramin|jobkorea|wanted)\.co\.kr\//, async route => {
     requests.push(new URL(route.request().url()).hostname)
     await route.fulfill({ contentType: "text/html; charset=utf-8", body: jobkorea })
   })
-  await ui.getByRole("button", { name: "조건 설정", exact: true }).click()
+  await ui.getByRole("button", { name: "검색 사이트", exact: true }).click()
   await expect(ui.getByRole("checkbox", { name: "사람인", exact: true })).toBeChecked()
   await expect(ui.getByRole("checkbox", { name: "잡코리아", exact: true })).toBeChecked()
   await ui.getByRole("checkbox", { name: "사람인", exact: true }).uncheck()
@@ -381,7 +382,7 @@ test("모든 공고가 지원 기업으로 제외되어도 자동 요청을 반�
     const body = saramin(Array.from({ length: 20 }, (_, index) => page * 1000 + index), "사람인", page + 1).replace(/예시기업 \d+/g, "예시기업")
     await route.fulfill({ contentType: "text/html; charset=utf-8", body })
   })
-  await ui.getByRole("button", { name: "조건 설정", exact: true }).click()
+  await ui.getByRole("button", { name: "검색 사이트", exact: true }).click()
   await ui.getByRole("checkbox", { name: "잡코리아", exact: true }).uncheck()
   await ui.getByRole("checkbox", { name: "원티드", exact: true }).uncheck()
   await ui.getByRole("dialog", { name: "필터 선택", exact: true }).getByRole("button", { name: "적용", exact: true }).click()
@@ -473,7 +474,7 @@ test("모든 조건은 같은 모달에서 전환하며 한 번의 적용으로 
     await route.fulfill({ contentType: "text/html; charset=utf-8", body: url.hostname.includes("saramin") ? saramin() : jobkorea })
   })
   const panel = ui.getByRole("dialog", { name: "필터 선택", exact: true })
-  for (const [trigger, tab] of [["직군·직무", "직무"], ["지역", "지역"], ["경력", "경력"], ["조건 설정", "검색 사이트"]] as const) {
+  for (const [trigger, tab] of [["직군·직무", "직무"], ["지역", "지역"], ["경력", "경력"], ["검색 사이트", "검색 사이트"]] as const) {
     await ui.getByRole("button", { name: trigger, exact: true }).click()
     await expect(ui.getByRole("dialog")).toHaveCount(1)
     await expect(panel.getByRole("tab", { name: tab, exact: true })).toHaveAttribute("aria-selected", "true")
@@ -725,4 +726,148 @@ test("직접 연차 선택은 경력을 자동 포함하고 해제·전체·초�
   await panel.getByRole("checkbox", { name: "경력무관 포함", exact: true }).locator("..").click()
   await panel.getByRole("button", { name: "적용", exact: true }).click()
   await expect(ui.getByRole("button", { name: "경력무관 조건 해제", exact: true })).toBeVisible()
+})
+
+test("마지막 적용 조건 1건을 페이지 재진입·새로고침·새 탭에서 복원하고 자동 조회하지 않는다", async () => {
+  let requests = 0
+  await context.route(/^https:\/\/www\.(saramin|jobkorea|wanted)\.co\.kr\//, async route => {
+    requests++
+    const host = new URL(route.request().url()).hostname
+    await route.fulfill({ contentType: host.includes("wanted") ? "application/json" : "text/html; charset=utf-8", body: host.includes("saramin") ? saramin() : host.includes("jobkorea") ? jobkorea : JSON.stringify(wanted) })
+  })
+  const saved = () => ui.evaluate(key => JSON.parse(localStorage.getItem(key)!), jobSearchPreferencesKey)
+  await ui.getByRole("searchbox", { name: "채용공고 검색어" }).fill("React")
+  await ui.getByRole("button", { name: "직군·직무", exact: true }).click()
+  const panel = ui.getByRole("dialog", { name: "필터 선택", exact: true })
+  await panel.getByRole("radio", { name: "IT개발·데이터", exact: true }).locator("..").click()
+  await panel.getByRole("checkbox", { name: "프론트엔드", exact: true }).locator("..").click()
+  await panel.getByRole("tab", { name: "지역", exact: true }).click()
+  await panel.getByRole("checkbox", { name: "서울", exact: true }).locator("..").click()
+  await panel.getByRole("tab", { name: "경력", exact: true }).click()
+  await panel.getByRole("button", { name: "신입~3년", exact: true }).click()
+  await panel.getByRole("tab", { name: "검색 사이트", exact: true }).click()
+  await panel.getByRole("checkbox", { name: "원티드", exact: true }).uncheck()
+  await panel.getByRole("button", { name: "적용", exact: true }).click()
+  await expect(ui.locator(".job-search-card")).toHaveCount(3)
+  await ui.getByRole("checkbox", { name: "지원 기업 제외하기", exact: true }).check()
+  const expected = { version: 1, query: "React", sites: ["saramin", "jobkorea"], filters: { group: [], role: ["frontend"], region: ["seoul"], career: ["new", "experienced"], careerMin: 0, careerMax: 3 }, excludeApplied: true }
+  expect(await saved()).toEqual(expected)
+  await ui.getByRole("searchbox", { name: "채용공고 검색어" }).fill("아직 검색하지 않은 입력")
+  await ui.getByRole("button", { name: "지역", exact: true }).click()
+  await panel.getByRole("checkbox", { name: "부산", exact: true }).locator("..").click()
+  await panel.getByRole("button", { name: "취소", exact: true }).click()
+  await ui.getByRole("checkbox", { name: "지원 기업 제외하기", exact: true }).uncheck()
+  await ui.getByRole("checkbox", { name: "지원 기업 제외하기", exact: true }).check()
+  expect(await saved()).toEqual(expected)
+  const navigation = ui.getByRole("navigation", { name: "주 메뉴", exact: true })
+  await navigation.getByRole("button", { name: "메모", exact: true }).click()
+  await navigation.getByRole("button", { name: "공고 통합검색", exact: true }).click()
+  await expect(ui.getByRole("searchbox", { name: "채용공고 검색어" })).toHaveValue("React")
+  await expect(ui.getByRole("button", { name: "서울 조건 해제", exact: true })).toBeVisible()
+  await expect(ui.getByRole("button", { name: "경력 3년 이하 조건 해제", exact: true })).toBeVisible()
+  await expect(ui.getByRole("checkbox", { name: "지원 기업 제외하기", exact: true })).toBeChecked()
+  await expect(ui.locator(".job-search-card")).toHaveCount(0)
+  expect(requests).toBe(2)
+  await ui.getByRole("button", { name: "검색 사이트", exact: true }).click()
+  await expect(panel.getByRole("checkbox", { name: "원티드", exact: true })).not.toBeChecked()
+  await panel.getByRole("button", { name: "취소", exact: true }).click()
+  await ui.reload()
+  await expect(ui.getByRole("searchbox", { name: "채용공고 검색어" })).toHaveValue("React")
+  await expect(ui.locator(".job-search-card")).toHaveCount(0)
+  expect(requests).toBe(2)
+  const reopened = await context.newPage()
+  await reopened.goto(ui.url())
+  await expect(reopened.getByRole("searchbox", { name: "채용공고 검색어" })).toHaveValue("React")
+  await expect(reopened.getByRole("button", { name: "프론트엔드 조건 해제", exact: true })).toBeVisible()
+  await expect(reopened.locator(".job-search-card")).toHaveCount(0)
+  expect(requests).toBe(2)
+  await reopened.close()
+  await ui.getByRole("button", { name: "통합검색", exact: true }).click()
+  await expect(ui.locator(".job-search-card")).toHaveCount(3)
+  expect(requests).toBe(4)
+  expect(await saved()).toEqual(expected)
+  expect(await ui.evaluate(key => Object.keys(localStorage).filter(name => name === key).length, jobSearchPreferencesKey)).toBe(1)
+  expect(JSON.stringify(await saved())).not.toMatch(/사람인 공고|잡코리아 공고|예시기업|jobs|records|response/)
+  expect(await countRecords()).toBe(0)
+})
+
+test("두 번째 조건은 한 건을 교체하고 초기화·사이트만 선택한 값도 다음 열기에 유지한다", async () => {
+  await mockSmallSearch()
+  const navigation = ui.getByRole("navigation", { name: "주 메뉴", exact: true })
+  await chooseFilter("근무 지역", "seoul")
+  await ui.getByRole("button", { name: "지역", exact: true }).click()
+  const panel = ui.getByRole("dialog", { name: "필터 선택", exact: true })
+  await panel.getByRole("checkbox", { name: "전국", exact: true }).locator("..").click()
+  await panel.getByRole("checkbox", { name: "부산", exact: true }).locator("..").click()
+  await panel.getByRole("button", { name: "적용", exact: true }).click()
+  await expect(ui.locator(".job-search-demo")).toHaveAttribute("aria-busy", "false")
+  await navigation.getByRole("button", { name: "메모", exact: true }).click()
+  await navigation.getByRole("button", { name: "공고 통합검색", exact: true }).click()
+  await expect(ui.getByRole("button", { name: "부산 조건 해제", exact: true })).toBeVisible()
+  await expect(ui.getByRole("button", { name: "서울 조건 해제", exact: true })).toHaveCount(0)
+  await ui.getByRole("button", { name: "전체 초기화", exact: true }).click()
+  await ui.getByRole("button", { name: "검색 사이트", exact: true }).click()
+  await panel.getByRole("checkbox", { name: "사람인", exact: true }).uncheck()
+  await panel.getByRole("checkbox", { name: "원티드", exact: true }).uncheck()
+  await panel.getByRole("button", { name: "적용", exact: true }).click()
+  await ui.reload()
+  await expect(ui.locator(".search-selected-filters")).toHaveCount(0)
+  await expect(ui.getByRole("searchbox", { name: "채용공고 검색어" })).toHaveValue("")
+  await ui.getByRole("button", { name: "검색 사이트", exact: true }).click()
+  await expect(panel.getByRole("checkbox", { name: "잡코리아", exact: true })).toBeChecked()
+  await expect(panel.getByRole("checkbox", { name: "사람인", exact: true })).not.toBeChecked()
+  await expect(panel.getByRole("checkbox", { name: "원티드", exact: true })).not.toBeChecked()
+})
+
+test("깨진 저장 조건은 기본 화면으로 복구하며 저장소가 막혀도 검색할 수 있다", async () => {
+  await mockSmallSearch()
+  await ui.evaluate(key => localStorage.setItem(key, '{"version":999,"query":"잘못된 값"}'), jobSearchPreferencesKey)
+  await ui.reload()
+  await expect(ui.getByRole("searchbox", { name: "채용공고 검색어" })).toHaveValue("")
+  await expect(ui.locator(".search-selected-filters")).toHaveCount(0)
+  await ui.addInitScript(key => {
+    const original = Storage.prototype.setItem
+    Storage.prototype.setItem = function(name, value) { if (name === key) throw new Error("storage disabled"); return original.call(this, name, value) }
+  }, jobSearchPreferencesKey)
+  await ui.reload()
+  await ui.getByRole("searchbox", { name: "채용공고 검색어" }).fill("React")
+  await ui.getByRole("button", { name: "통합검색", exact: true }).click()
+  await expect(ui.locator(".job-search-card")).toHaveCount(4)
+})
+
+test("직군 목록 하단을 선택해도 스크롤 위치를 유지하고 키보드로 이어 탐색한다", async () => {
+  for (const width of [1440, 390]) {
+    await ui.setViewportSize({ width, height: width === 390 ? 844 : 1000 })
+    for (const theme of ["light", "dark"]) {
+      await ui.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
+      await ui.getByRole("button", { name: "직군·직무", exact: true }).click()
+      const panel = ui.getByRole("dialog", { name: "필터 선택", exact: true })
+      const groups = panel.locator(".filter-modal-groups")
+      for (let index = 8; index < jobGroups.length; index++) {
+        const option = groups.getByRole("radio").nth(index)
+        await option.locator("..").scrollIntoViewIfNeeded()
+        const top = await groups.evaluate(element => element.scrollTop)
+        await option.locator("..").click()
+        await expect(option).toBeChecked()
+        expect(await groups.evaluate(element => element.scrollTop), `width=${width}, theme=${theme}, group=${index}`).toBeCloseTo(top, 0)
+        expect(await panel.evaluate(element => element.scrollTop), `modal width=${width}, theme=${theme}, group=${index}`).toBe(0)
+      }
+      const last = groups.getByRole("radio").last(), previous = groups.getByRole("radio").nth(jobGroups.length - 2)
+      await last.locator("..").scrollIntoViewIfNeeded()
+      const before = await groups.evaluate(element => element.scrollTop)
+      expect(before).toBeGreaterThan(100)
+      await last.locator("..").click()
+      await expect(last).toBeChecked()
+      await expect.poll(() => groups.evaluate(element => element.scrollTop)).toBeCloseTo(before, 0)
+      await previous.locator("..").click()
+      await expect(previous).toBeChecked()
+      expect(Math.abs(await groups.evaluate(element => element.scrollTop) - before)).toBeLessThanOrEqual(1)
+      await previous.press("ArrowDown")
+      await expect(last).toBeChecked()
+      expect(Math.abs(await groups.evaluate(element => element.scrollTop) - before)).toBeLessThanOrEqual(1)
+      expect(await panel.locator(".filter-modal-content").evaluate(element => element.scrollTop)).toBe(0)
+      await expect(panel.getByRole("button", { name: "적용", exact: true })).toBeInViewport()
+      await panel.getByRole("button", { name: "취소", exact: true }).click()
+    }
+  }
 })

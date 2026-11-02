@@ -61,7 +61,7 @@ export function SearchFilterModal({ initialSection, value, sites, onSectionChang
       }}>{item.label}</Button>)}</div>
     </aside>
 
-    <section className="filter-modal-main"><header className="filter-modal-heading"><div><h3>{current.title}</h3><span className="filter-modal-multi-hint">{section === "career" ? "연차 범위 설정" : "여러 개 선택 가능"}</span></div><Button variant="ghost" size="icon" className="filter-modal-close" aria-label="필터 닫기" onClick={onClose}><Icon name="close" size={19} /></Button></header>
+    <section className="filter-modal-main"><header className="filter-modal-heading"><div><h3>{current.title}</h3>{section !== "job" && <span className="filter-modal-multi-hint">{section === "career" ? "연차 범위 설정" : "여러 개 선택 가능"}</span>}</div><Button variant="ghost" size="icon" className="filter-modal-close" aria-label="필터 닫기" onClick={onClose}><Icon name="close" size={19} /></Button></header>
       <div className="filter-modal-content" role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-${section}`}>
         {section === "job" && <div className="filter-modal-job-picker">
           <fieldset className="filter-modal-groups"><legend className="sr-only">직군 탐색</legend>{jobGroups.map(item => {
@@ -72,7 +72,7 @@ export function SearchFilterModal({ initialSection, value, sites, onSectionChang
             {activeGroup === "development" ? <>
               <label className="filter-modal-option-search"><Icon name="search" size={15} /><Input type="search" aria-label="세부 직무 검색" placeholder="직무 검색" value={query} onChange={event => setQuery(event.target.value)} /></label>
               <fieldset className="filter-modal-role-chips"><legend className="sr-only">세부 직무</legend>{roles.map(role => <FilterOption key={role.id} label={role.id === "all" ? "IT개발·데이터 전체" : role.label} checked={role.id === "all" ? draft.group.includes("development") : draft.role.includes(role.id)} onChange={() => setDraft(current => role.id === "all" ? toggleSearchGroup(current, "development") : toggleSearchRole(current, role.id))}>{role.id === "all" ? "전체" : role.label}</FilterOption>)}</fieldset>{!roles.length && <p className="filter-modal-empty">일치하는 직무가 없어요.</p>}
-            </> : activeGroup === "all" ? <><FilterOption label="전체 직군" checked={!draft.group.length && !draft.role.length} onChange={() => setDraft(current => ({ ...current, group: [], role: [] }))}>전체 직군</FilterOption><p className="filter-modal-description">직군을 선택해 원하는 직무를 찾아보세요.</p></> : <><FilterOption label={`${group.label} 전체`} checked={draft.group.includes(activeGroup)} onChange={() => setDraft(current => toggleSearchGroup(current, activeGroup))}>{group.label} 전체</FilterOption><p className="filter-modal-description">이 직군의 공고를 모두 살펴봐요.</p></>}
+            </> : activeGroup === "all" ? <FilterOption label="전체 직군" checked={!draft.group.length && !draft.role.length} onChange={() => setDraft(current => ({ ...current, group: [], role: [] }))}>전체 직군</FilterOption> : <><FilterOption label={`${group.label} 전체`} checked={draft.group.includes(activeGroup)} onChange={() => setDraft(current => toggleSearchGroup(current, activeGroup))}>{group.label} 전체</FilterOption><p className="filter-modal-description">이 직군의 공고를 모두 살펴봐요.</p></>}
           </div>
         </div>}
 

@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { platformLabel, type ApplicationRecord } from "../core/model"
 import { applicationHistoryIndex, searchCompanyNameKey } from "../search/application-history"
-import { searchLimits, searchPlatforms, type SearchPlatform } from "../search/model"
-import { defaultSearchFilters, hasSearchFilters, type SearchFilters } from "../search/filters"
+import { searchLimits, type SearchPlatform } from "../search/model"
+import { hasSearchFilters, type SearchFilters } from "../search/filters"
+import { readSearchPreferences, saveSearchPreferences, type SearchPreferences } from "../search/preferences"
 import { Icon } from "./components"
 import { PlatformSymbol } from "./platform-logo"
 import { Input } from "./primitives/input"
@@ -16,12 +17,14 @@ import "./job-search.css"
 const failureLabels = { unreadable: "응답 확인 필요", blocked: "접근 제한", login_required: "로그인 필요", timeout: "응답 지연", error: "요청 실패", unsupported: "조건 검색 연결 전" }
 
 export function JobSearch({ records }: { records: ApplicationRecord[] }) {
-  const [query, setQuery] = useState("")
-  const [selected, setSelected] = useState<SearchPlatform[]>([...searchPlatforms])
-  const [conditions, setConditions] = useState<SearchFilters>({ ...defaultSearchFilters })
+  const [initial] = useState(readSearchPreferences)
+  const confirmed = useRef(initial)
+  const [query, setQuery] = useState(initial.query)
+  const [selected, setSelected] = useState<SearchPlatform[]>(initial.sites)
+  const [conditions, setConditions] = useState<SearchFilters>(initial.filters)
   const [filter, setFilter] = useState<SearchPlatform | "all">("all")
   const [validation, setValidation] = useState("")
-  const [excludeApplied, setExcludeApplied] = useState(false)
+  const [excludeApplied, setExcludeApplied] = useState(initial.excludeApplied)
   const [nearEnd, setNearEnd] = useState(false)
   const [historyCompany, setHistoryCompany] = useState<{ name: string; key: string }>()
   const sentinel = useRef<HTMLDivElement>(null)
@@ -50,9 +53,15 @@ export function JobSearch({ records }: { records: ApplicationRecord[] }) {
     }
   }, [nearEnd, busy, paused, hasMore, loadMore, filter, excludeApplied, jobs.length])
 
+  function remember(filters: SearchFilters, platforms: SearchPlatform[], keyword = query.trim()) {
+    const preferences: SearchPreferences = { query: keyword, filters, sites: platforms, excludeApplied }
+    confirmed.current = preferences
+    saveSearchPreferences(preferences)
+  }
   function performSearch(filters = conditions, platforms = selected) {
     const keyword = query.trim()
     if ((!keyword && !hasSearchFilters(filters)) || keyword.length > searchLimits.queryLength || !platforms.length) { setValidation("검색어 또는 검색 조건과 검색할 사이트를 선택해 주세요."); return }
+    remember(filters, platforms, keyword)
     setFilter("all"); setValidation(""); lastAutoLoad.current = ""
     search({ query: keyword, filters: { ...filters } }, platforms)
   }
@@ -60,7 +69,12 @@ export function JobSearch({ records }: { records: ApplicationRecord[] }) {
     setConditions(filters)
     setSelected(platforms)
     if (query.trim() || hasSearchFilters(filters)) performSearch(filters, platforms)
-    else { clear(); setValidation("") }
+    else { remember(filters, platforms); clear(); setValidation("") }
+  }
+  function changeExcludeApplied(next: boolean) {
+    setExcludeApplied(next)
+    confirmed.current = { ...confirmed.current, excludeApplied: next }
+    saveSearchPreferences(confirmed.current)
   }
 
   return <div className="job-search-demo" aria-busy={busy}>
@@ -70,7 +84,7 @@ export function JobSearch({ records }: { records: ApplicationRecord[] }) {
     </form>
     <div className="job-search-sticky-controls">
       <JobSearchFilters value={conditions} onChange={filters => applyFilters(filters, selected)} sites={selected} onApply={applyFilters} />
-      <div className="job-search-controls"><label className="job-search-exclude"><Input type="checkbox" checked={excludeApplied} onChange={event => setExcludeApplied(event.target.checked)} />지원 기업 제외하기</label><span className="job-search-demo-label">실험 기능</span></div>
+      <div className="job-search-controls"><label className="job-search-exclude"><Input type="checkbox" checked={excludeApplied} onChange={event => changeExcludeApplied(event.target.checked)} />지원 기업 제외하기</label></div>
     </div>
 
     {!!sites.length && <>

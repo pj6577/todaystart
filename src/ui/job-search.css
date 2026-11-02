@@ -6,7 +6,6 @@
 .search-filter-trigger.ui-button:hover { background:color-mix(in srgb,var(--surface-hover) 90%,var(--text) 10%); border-color:var(--border-strong); color:var(--text); }
 .search-filter-trigger.ui-button.is-active { background:var(--surface-hover); border-color:var(--border-strong); color:var(--text); }
 .search-filter-trigger.ui-button.is-active:hover { background:color-mix(in srgb,var(--surface-hover) 90%,var(--text) 10%); }
-.search-filter-trigger:last-child { margin-left:auto; }
 .search-selected-filters { display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding-top:12px; }
 .search-selected-chip { display:inline-flex; align-items:center; gap:8px; padding:6px 9px; background:var(--selected); border-radius:6px; font-size:11px; color:var(--text-secondary); }
 .search-selected-chip:hover { background:var(--surface-hover); color:var(--text); }
@@ -19,7 +18,6 @@
 .job-search-exclude { display:flex; align-items:center; gap:8px; min-height:32px; margin:0; padding:0; cursor:pointer; font-size:12px; line-height:20px; color:var(--text-secondary); }
 .job-search-exclude input[type="checkbox"] { flex:none; display:block; width:16px; height:16px; margin:0; padding:0; }
 .job-search-controls input { accent-color: var(--accent); }
-.job-search-demo-label { flex: none; font-size: 10px; border: 1px solid var(--border-strong); color: var(--text-muted); border-radius: 5px; padding: 3px 7px; }
 .job-search-error { margin-top: 10px; color: var(--danger); font-size: 12px; }
 .job-search-results-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:24px 0 18px; }
 .job-search-filters { display:flex; flex-wrap:wrap; gap:4px; padding:4px; border:1px solid var(--border); border-radius:10px; background:var(--surface); }

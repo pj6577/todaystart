@@ -21,7 +21,7 @@ export function JobSearchFilters({ value, onChange, sites, onApply }: FilterProp
     { section: "job", label: "직군·직무", summary: jobLabels.join(" · ") || "전체 직군", active: !!jobLabels.length },
     { section: "region", label: "지역", summary: value.region.map(id => searchRegions.find(region => region.id === id)!.label).join(" · ") || "지역 전체", active: !!value.region.length },
     { section: "career", label: "경력", summary: value.career.map(id => searchCareerLabel(id, value)).join(" · ") || "경력 전체", active: hasSearchCareerFilters(value) },
-    { section: "sites", label: "조건 설정", summary: sites.map(site => platformLabel[site]).join(" · "), active: sites.length !== searchPlatforms.length }
+    { section: "sites", label: "검색 사이트", summary: sites.map(site => platformLabel[site]).join(" · "), active: sites.length !== searchPlatforms.length }
   ]
   const chips = [
     ...value.group.map(id => ({ key: `group:${id}`, label: jobGroups.find(group => group.id === id)!.label, remove: () => onChange({ ...value, group: value.group.filter(group => group !== id) }) })),

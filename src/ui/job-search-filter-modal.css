@@ -20,7 +20,8 @@
 .filter-modal-job-picker { display:grid; grid-template-columns:176px minmax(0,1fr); height:100%; min-height:0; }
 .filter-modal-groups { min-width:0; overflow:auto; overscroll-behavior:contain; padding:0 12px 20px 20px; border-right:1px solid var(--border); scrollbar-width:thin; scrollbar-color:var(--border-strong) transparent; }
 .filter-modal-group { display:flex; align-items:center; min-height:42px; margin-bottom:6px; padding:10px 12px; border-radius:7px; cursor:pointer; font-size:12px; font-weight:550; line-height:1.5; color:var(--text-secondary); }
-.filter-modal-group { gap:6px; justify-content:space-between; }
+/* Keep the visually hidden radio inside its row when the browser focuses it. */
+.filter-modal-group { position:relative; gap:6px; justify-content:space-between; }
 .filter-modal-group:hover { background:var(--surface-hover); color:var(--text); }
 .filter-modal-group.selected { background:var(--filter-selected-bg); color:var(--text); }
 .filter-modal-group-count { display:grid; place-items:center; flex:none; min-width:18px; height:18px; padding:0 4px; border-radius:5px; background:var(--text-secondary); color:var(--surface); font-size:10px; }
