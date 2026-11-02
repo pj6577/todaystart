@@ -1,0 +1,37 @@
+{
+  "file": "release/todaystart-0.11.2.zip",
+  "version": "0.11.2",
+  "sourceCommit": "b8a5cfbef2140aa6aae119a0a8e31069660a9468",
+  "bytes": 2778082,
+  "files": 46,
+  "sha256": "2eaa715334d3b3738c6b36744cbe39962725b958bc42b1e6d5bbe401fbaca5ce",
+  "archiveIntegrity": "passed",
+  "buildBytesMatch": true,
+  "manifestResourcesPresent": true,
+  "permissionsUnchanged": true,
+  "permissionsComparedWith": "0.11.1",
+  "contentAndBackgroundComparedWith0_11_1": {
+    "static/background/index.js": true,
+    "jobs.a479fee3.js": true,
+    "submission-bridge.fba59b30.js": true,
+    "wanted-submission.6e6a7328.js": true,
+    "main.ad03b8e0.js": true
+  },
+  "licensesIncluded": true,
+  "excludedHistoricalAssets": true,
+  "secretPatternMatches": [],
+  "sourcePatternAudit": {
+    "trackedTextFiles": 340,
+    "matches": []
+  },
+  "validation": {
+    "typecheck": "passed",
+    "build": "passed",
+    "browserTests": "not run at user request; user will review the screen",
+    "unitTests": "not rerun for layout-only change"
+  },
+  "limitations": [
+    "Wanted structured conditions remain unimplemented; keyword only",
+    "Live site access and structure can differ from synthetic browser validation"
+  ]
+}
