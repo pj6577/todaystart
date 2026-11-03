@@ -1,0 +1,38 @@
+{
+  "file": "release/todaystart-0.12.0.zip",
+  "version": "0.12.0",
+  "sourceCommit": "26402a429be05e677b1908faac25eae5745ad16f",
+  "bytes": 2817993,
+  "files": 46,
+  "sha256": "630c0b8eddab339472cb7727e23f8ed3b36dade9a60d93230ead1b9e5d486bbe",
+  "archiveIntegrity": "passed",
+  "buildBytesMatch": true,
+  "manifestResourcesPresent": true,
+  "permissionsComparedWith": "0.11.4",
+  "extensionPermissionsUnchanged": true,
+  "addedHostPermissions": [
+    "https://career-api.rememberapp.co.kr/*"
+  ],
+  "removedHostPermissions": [],
+  "contentRegistrationsUnchanged": true,
+  "licensesIncluded": true,
+  "excludedHistoricalAssets": true,
+  "secretPatternMatches": [],
+  "sourcePatternAudit": {
+    "trackedTextFiles": 375,
+    "matches": []
+  },
+  "validation": {
+    "typecheck": "passed",
+    "build": "passed",
+    "unitTests": 735,
+    "failedUnitTests": 0,
+    "browserTests": "not run at user request; user will review the screen",
+    "livePublicHttp": "Prior four-source keyword/filter checks returned fresh posting IDs on pages 1-3; Remember OR and empty results checked"
+  },
+  "limitations": [
+    "Bookmarks and platform order are local and not included in the existing JSON backup",
+    "No live browser or pixel layout checks were run at user request",
+    "Authenticated Jobkorea applied status was tested using reconstructed user-provided DOM"
+  ]
+}
