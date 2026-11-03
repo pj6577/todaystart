@@ -1296,7 +1296,11 @@ p {
   grid-column: 1/-1;
   display: grid;
   grid-template-columns: 0.85fr 1.15fr;
-  min-height: 440px;
+  min-height: 470px;
+}
+.feature-story-wide > .feature-art {
+  height: 470px;
+  min-height: 0;
 }
 .story-copy {
   position: relative;
@@ -1588,10 +1592,22 @@ p {
   padding: 13px 14px;
 }
 .history-result-quiet {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
   color: var(--muted);
   border: 1px solid var(--line);
   border-radius: 9px;
   background: var(--surface-inset);
+}
+.history-result-quiet > strong {
+  margin: 0;
+  font-size: 11px;
+}
+.history-result-quiet .history-job-meta {
+  display: none;
 }
 .history-company {
   display: block;
@@ -2163,6 +2179,11 @@ p {
   .feature-story-wide {
     grid-column: auto;
     grid-template-columns: 1fr;
+    min-height: 0;
+  }
+  .feature-story-wide > .feature-art {
+    height: auto;
+    min-height: 0;
   }
   .feature-story-wide .story-copy {
     padding-bottom: 30px;
