@@ -182,12 +182,72 @@
         aria-labelledby="features-title"
       >
         <div class="section-heading">
-          <p class="eyebrow">기록에서 다음 준비까지</p>
+          <p class="eyebrow">공고 탐색에서 다음 준비까지</p>
           <h2 id="features-title">지원은 여러 곳에서,<br />준비는 한 흐름으로.</h2>
-          <p>이전 지원을 확인하고, 기록을 모으고, 다음 면접을 준비해요.</p>
+          <p>새 공고를 찾고, 이전 지원을 확인하고, 다음 면접을 준비해요.</p>
         </div>
 
         <div class="feature-stories">
+          <article class="feature-story feature-story-wide search-story" id="job-search">
+            <div class="story-copy">
+              <span class="story-label"
+                ><svg aria-hidden="true" viewBox="0 0 24 24">
+                  <circle cx="10.5" cy="10.5" r="6.5" />
+                  <path d="m16 16 5 5" /></svg
+                >공고 통합검색<span class="story-preview-label">실험 기능</span></span
+              >
+              <h3>네 곳의 채용공고를,<br />한 번에 찾아요.</h3>
+              <p>
+                사람인·잡코리아·원티드·리멤버 공고를<br class="desktop-break" />
+                검색어와 직군·지역·경력 조건으로 살펴봐요.
+              </p>
+              <ul class="search-story-points">
+                <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></svg>지원했던 기업은 제외하고 새로운 기회 찾기</li>
+                <li><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4-6 4z" /></svg>관심 있는 공고는 북마크로 모아 보기</li>
+              </ul>
+              <a class="story-link" href="#search-faq"
+                >통합검색은 어떻게 쓰나요? <span aria-hidden="true">↗</span></a
+              >
+            </div>
+            <div
+              class="feature-art search-art"
+              role="img"
+              aria-label="프론트엔드 검색어와 서울·경력 조건으로 네 채용 사이트의 공고를 모아 보고, 지원 기업을 제외하고 관심 공고를 북마크하는 통합검색 일러스트"
+            >
+              <div class="search-preview illustration-card">
+                <div class="search-art-heading">
+                  <img src="./assets/icon.svg" width="22" height="22" alt="" />
+                  <strong>공고 통합검색</strong>
+                  <span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4-6 4z" /></svg>북마크</span>
+                </div>
+                <div class="search-art-input">
+                  <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg>
+                  <span>프론트엔드</span><span class="search-art-submit">통합검색</span>
+                </div>
+                <div class="search-art-filters">
+                  <span>개발 · 프론트엔드</span><span>서울</span><span>경력 1~3년</span>
+                </div>
+                <div class="search-art-sources">
+                  <span><img src="./assets/saramin-symbol.png" width="16" height="16" alt="" />사람인</span>
+                  <span><img src="./assets/jobkorea-symbol.png" width="16" height="16" alt="" />잡코리아</span>
+                  <span><img src="./assets/wanted-symbol.png" width="16" height="16" alt="" />원티드</span>
+                  <span><img src="./assets/remember-symbol.png" width="16" height="16" alt="" />리멤버</span>
+                </div>
+                <div class="search-art-exclude"><span aria-hidden="true">✓</span>지원 기업 제외하기</div>
+                <div class="search-art-results">
+                  <div class="search-art-result">
+                    <div class="search-result-source"><img src="./assets/saramin-symbol.png" width="17" height="17" alt="" /><span>사람인</span><svg class="search-saved-mark" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4-6 4z" /></svg></div>
+                    <span class="search-result-company">온길스튜디오</span><strong>프론트엔드 개발자</strong><span class="search-result-meta">서울 · 경력 1년 이상</span>
+                  </div>
+                  <div class="search-art-result">
+                    <div class="search-result-source"><img src="./assets/jobkorea-symbol.png" width="17" height="17" alt="" /><span>잡코리아</span><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4-6 4z" /></svg></div>
+                    <span class="search-result-company">새봄컴퍼니</span><strong>웹 서비스 개발자</strong><span class="search-result-meta">서울 · 경력 2년 이상</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
           <article class="feature-story feature-story-wide">
             <div class="story-copy">
               <span class="story-label"
@@ -231,7 +291,7 @@
               </div>
               <div class="current-job illustration-card">
                 <div class="art-window" aria-hidden="true">
-                  <i></i><i></i><i></i><span>채용공고</span>
+                  <span>채용공고</span>
                 </div>
                 <div class="job-illustration-body">
                   <span class="art-company">모닝랩</span
@@ -326,8 +386,7 @@
               aria-label="기업과 연결한 면접 준비 체크리스트와 면접 일정이 담긴 달력 일러스트"
             >
               <div class="prep-note illustration-card">
-                <span class="note-pin" aria-hidden="true"></span
-                ><span class="note-mention">@모닝랩</span><strong>면접 준비</strong
+                <span class="note-mention">@모닝랩</span><strong>면접 준비</strong
                 ><span class="note-task task-done"
                   ><i aria-hidden="true">✓</i>프로젝트 경험 정리</span
                 ><span class="note-task"><i aria-hidden="true"></i>팀에 물어볼 질문</span
@@ -665,6 +724,16 @@
               가져오거나 직접 추가해 저장한 기록을 기준으로 확인해요. 회사명 표기가 다르거나 이름만
               비슷할 수 있으므로 실제 지원 여부와 동일 기업 여부는 직접 확인해 주세요. 완료 근거가
               부족한 지원 시도는 확인 대기로 표시해요.
+            </p>
+          </details>
+          <details id="search-faq">
+            <summary>여러 사이트의 채용공고를 한 번에 검색할 수 있나요?<span aria-hidden="true">+</span></summary>
+            <p>
+              관리 화면의 ‘공고 통합검색’에서 사람인·잡코리아·원티드·리멤버 공고를 함께 찾아볼 수
+              있어요. 검색어와 직군·지역·경력 조건을 고르고, ‘지원 기업 제외하기’로 저장된 지원
+              이력이 있는 기업을 제외할 수 있어요. 관심 공고는 북마크로 저장해 다시 살펴보세요.
+              현재 실험 기능으로, 사이트의 접근 제한이나 화면 변경에 따라 일부 결과를 가져오지
+              못할 수 있어요.
             </p>
           </details>
           <details>
