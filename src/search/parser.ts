@@ -15,7 +15,7 @@ function job(platform: SearchPlatform, companyName: string | undefined, jobTitle
   return { id: `${platform}:${sourceId}`, platform, companyName, jobTitle, jobUrl }
 }
 
-export function parseSearchHtml(platform: Exclude<SearchPlatform, "wanted">, html: string, base: string, page: number): SearchPage {
+export function parseSearchHtml(platform: "saramin" | "jobkorea", html: string, base: string, page: number): SearchPage {
   // Parse an inert document, discard scripts/styles/embedded resources, and return text + canonical links only.
   const inert = html.replace(/<(script|style|svg|iframe|object|video|audio)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "")
     .replace(/<(?:img|link|base|embed|source|frame)\b[^>]*>/gi, "")

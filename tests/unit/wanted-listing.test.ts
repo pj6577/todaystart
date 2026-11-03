@@ -21,6 +21,22 @@ afterEach(() => {
 })
 
 describe("원티드 목록 카드의 이전 지원 안내", () => {
+  it("사람인의 (주)아인잡 지원을 원티드 아인잡(AINJOB) 카드에 다른 직무여도 표시한다", () => {
+    document.body.innerHTML = `<ul data-cy="job-list">${wantedCard(325032, "아인잡(AINJOB)", "WEB Front 개발 리더 (3~5년)")}</ul>`
+    const prior = record({ platform: "saramin", companyName: "(주)아인잡", normalizedCompanyName: "아인잡", jobTitle: "프론트엔드 개발자 (경력)", appliedAt: "2026-10-30", readStatus: "unknown" })
+    const before = structuredClone(prior)
+    const postings = new DomPlatformAdapter("wanted").extractJobPostings(document)
+    expect(postings[0]).toMatchObject({ companyName: "아인잡(AINJOB)", sourceJobId: "325032" })
+    expect(warnings.render(postings, [prior], defaultSettings, "listing").matches).toBe(1)
+    const host = document.querySelector("todaystart-warning")!
+    expect(host.parentElement).toBe(document.querySelector('[data-cy="job-card"]'))
+    expect(host.closest("a,button")).toBeNull()
+    expect(host.shadowRoot?.querySelector("summary")?.textContent).toContain("사람인 지원 이력 있음")
+    expect(host.shadowRoot?.textContent).toContain("프론트엔드 개발자 (경력)")
+    expect(host.shadowRoot?.textContent).toContain("2026-10-30")
+    expect(prior).toEqual(before)
+  })
+
   it.each(["/wdlist", "/wdlist/", "/wdlist/518", "/wdlist/518/669"])("목록 경로에서 사용자 제공 카드와 공개 공고 ID를 읽는다: %s", path => {
     const adapter = new DomPlatformAdapter("wanted")
     const location = `https://www.wanted.co.kr${path}`

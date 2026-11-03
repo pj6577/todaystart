@@ -1,4 +1,4 @@
-export const searchPlatforms = ["saramin", "jobkorea", "wanted"] as const
+export const searchPlatforms = ["saramin", "jobkorea", "wanted", "remember"] as const
 export type SearchPlatform = typeof searchPlatforms[number]
 
 export const searchLimits = { pages: 1000, rows: 50, timeoutMs: 20000, maxBytes: 6 * 1024 * 1024, queryLength: 100 } as const

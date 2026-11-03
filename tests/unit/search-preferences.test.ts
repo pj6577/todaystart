@@ -66,7 +66,7 @@ describe("통합검색의 마지막 적용 조건 1건 저장", () => {
   it("기본값의 중첩 배열을 공유하지 않는다", () => {
     const one = defaultSearchPreferences(), two = defaultSearchPreferences()
     one.sites.pop()
-    expect(two.sites).toHaveLength(3)
+    expect(two.sites).toHaveLength(4)
     expect(one.filters.role).not.toBe(two.filters.role)
   })
 })

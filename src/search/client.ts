@@ -1,8 +1,9 @@
-import { searchLimits, type SearchPlatform, type SiteSearchResult } from "./model"
+import { appendSearchJobs, searchLimits, type SearchPlatform, type SiteSearchResult } from "./model"
 import { searchUrls } from "./sources"
 import { parseSearchHtml, parseWantedSearch } from "./parser"
 import { defaultSearchFilters, type SearchFilters } from "./filters"
 import { WantedIntersection } from "./wanted-intersection"
+import { parseRememberSearch } from "./remember-parser"
 
 async function readText(response: Response): Promise<string> {
   if (Number(response.headers.get("content-length")) > searchLimits.maxBytes) throw new Error("응답 크기가 데모 처리 범위를 넘었습니다.")
@@ -34,10 +35,11 @@ export async function requestSearchPage(platform: SearchPlatform, query: string,
   const timer = setTimeout(() => { timedOut = true; controller.abort() }, searchLimits.timeoutMs)
   try {
     if (controller.signal.aborted) return { ...base, status: "cancelled", message: "검색을 중지했습니다." }
-    const load = async (requestUrl: string): Promise<SiteSearchResult> => {
+    const load = async (requestUrl: string, requestBody?: string): Promise<SiteSearchResult> => {
       const response = await request(requestUrl, {
-        method: "GET", credentials: "omit", redirect: "error", cache: "no-store", referrerPolicy: "no-referrer",
-        headers: { Accept: urls.format === "json" ? "application/json" : "text/html" }, signal: controller.signal
+        method: requestBody === undefined ? "GET" : "POST", ...(requestBody !== undefined ? { body: requestBody } : {}),
+        credentials: "omit", redirect: "error", cache: "no-store", referrerPolicy: "no-referrer",
+        headers: { Accept: urls.format === "json" ? "application/json" : "text/html", ...(requestBody !== undefined ? { "Content-Type": "application/json" } : {}) }, signal: controller.signal
       })
       if ([403, 429].includes(response.status)) return { ...base, status: "blocked", message: response.status === 429 ? "사이트 요청 한도에 도달했습니다. 잠시 후 다시 검색해 주세요. (HTTP 429)" : "사이트에서 직접 요청을 허용하지 않았습니다. (HTTP 403)" }
       if (response.status === 401) return { ...base, status: "login_required", message: "사이트 로그인이 필요한 응답입니다." }
@@ -47,9 +49,18 @@ export async function requestSearchPage(platform: SearchPlatform, query: string,
       if (urls.format === "json") {
         let value: unknown
         try { value = JSON.parse(body) } catch { return { ...base, status: "unreadable", message: "공고 목록 대신 다른 응답이 도착했습니다. 사이트에서 검색을 확인해 주세요." } }
-        return { ...base, ...parseWantedSearch(value, page) }
+        return { ...base, ...(platform === "remember" ? parseRememberSearch(value, page) : parseWantedSearch(value, page)) }
       }
       return { ...base, ...parseSearchHtml(platform as "saramin" | "jobkorea", body, urls.searchUrl, page) }
+    }
+    if ("bodies" in urls) {
+      const parts = await Promise.all(urls.bodies.map(body => load(urls.requestUrl, body)))
+      if (controller.signal.aborted) throw new Error("aborted")
+      const failed = parts.find(part => part.status !== "ok" && part.status !== "empty")
+      if (failed) return failed
+      const jobs = parts.reduce((jobs, part) => appendSearchJobs(jobs, part.jobs), [] as SiteSearchResult["jobs"])
+      const hasNext = parts.some(part => part.hasNext)
+      return { ...base, jobs, hasNext, status: jobs.length || hasNext ? "ok" : "empty", ...(!jobs.length && !hasNext ? { message: "검색 결과가 없습니다." } : {}) }
     }
     if ("comparisonUrl" in urls && urls.comparisonUrl) {
       const session = wantedSession ?? new WantedIntersection()

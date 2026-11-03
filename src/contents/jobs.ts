@@ -15,6 +15,8 @@ import { collectionPolicy } from "../collection/policy"
 import { CollectionIndicator } from "../ui/collection-indicator"
 import { WantedHistoryReader } from "../platforms/wanted-history"
 import { SaraminApplyLayer } from "../platforms/saramin-apply-layer"
+import { jobkoreaAppliedDetail } from "../platforms/jobkorea-detail"
+import { hasJobkoreaAppliedCompany } from "../core/jobkorea-applied-status"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://www.saramin.co.kr/*", "https://www.jobkorea.co.kr/*", "https://www.wanted.co.kr/*", "https://profile.rememberapp.co.kr/*", "https://career.rememberapp.co.kr/*"],
@@ -27,6 +29,7 @@ let adapter = new DomPlatformAdapter(platform)
 const warnings = new PostingWarnings()
 let state: PageState = { platform, kind: "other", matches: 0, message: "페이지를 확인하고 있습니다." }
 let lastSuccessFingerprint = ""
+let lastAppliedStatusFingerprint = ""
 let running = false
 let rerun = false
 const session = new HistorySession()
@@ -128,7 +131,7 @@ async function refreshSnapshot() {
 function observeRoot() {
   const profile = adapter.profile
   const selector = pageKind() === "history" ? profile?.historyRoot : adapter.postingProfile(location.href, document)?.root
-  const root = selector ? document.querySelector(selector) : pageKind() === "history" ? historyObservationRoot(document) : undefined
+  const root = platform === "jobkorea" && pageKind() === "detail" ? document.querySelector("main") : selector ? document.querySelector(selector) : pageKind() === "history" ? historyObservationRoot(document) : undefined
   lifecycle.observe(root, state.collectionCode === "loading")
 }
 async function sync(automatic: boolean, result?: CollectionResult, runId?: string): Promise<SyncReport> {
@@ -182,7 +185,15 @@ async function refresh() {
         session.lastHistoryFingerprint = fingerprint
       }
     }
-    if (settings.autoRecord && settings.consent[platform] && adapter.detectApplicationSuccess(document)) {
+    const completedDetail = platform === "jobkorea" && kind === "detail" ? jobkoreaAppliedDetail(document) : undefined
+    if (completedDetail && settings.autoRecord && settings.consent.jobkorea && !session.resetPaused) {
+      const fingerprint = JSON.stringify([snapshot!.dataGeneration, completedDetail])
+      if (fingerprint !== lastAppliedStatusFingerprint) {
+        if (!hasJobkoreaAppliedCompany(completedDetail, snapshot!.records)) await rpc({ type: "jobkorea_applied_status", posting: completedDetail, dataGeneration: snapshot!.dataGeneration })
+        lastAppliedStatusFingerprint = fingerprint
+      }
+    }
+    if (!completedDetail && settings.autoRecord && settings.consent[platform] && adapter.detectApplicationSuccess(document)) {
       const record = adapter.successRecord(document)
       const fingerprint = record && JSON.stringify([location.href, record.sourceApplicationId, record.sourceJobId, record.appliedAt, record.companyName, record.jobTitle])
       if (record && fingerprint !== lastSuccessFingerprint) {

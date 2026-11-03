@@ -32,6 +32,7 @@ export interface ResponseMap {
   manual_create: StoredResult<"createManual">
   collect: SyncReport
   observe: StoredResult<"merge">
+  jobkorea_applied_status: StoredResult<"addJobkoreaAppliedStatus">
   edit: StoredResult<"edit">
   remove: boolean
   note_save: StoredResult<"saveNote">

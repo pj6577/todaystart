@@ -20,7 +20,7 @@ function validated(value: unknown): SearchBookmark {
   const jobUrl = safeJobUrl(job.jobUrl, job.platform), id = jobIdFromUrl(jobUrl)
   if (!jobUrl || !id || !/^\d+$/.test(id) || job.id !== `${job.platform}:${id}`) throw new Error("저장할 공고 주소를 확인해 주세요.")
   const path = new URL(jobUrl).pathname
-  if (!(job.platform === "saramin" ? /^\/zf_user\/jobs\/relay\/(?:pop-)?view\/?$/i : job.platform === "jobkorea" ? /^\/recruit\/gi_read\/\d+\/?$/i : /^\/wd\/\d+\/?$/).test(path)) throw new Error("저장할 공고 주소를 확인해 주세요.")
+  if (!(job.platform === "saramin" ? /^\/zf_user\/jobs\/relay\/(?:pop-)?view\/?$/i : job.platform === "jobkorea" ? /^\/recruit\/gi_read\/\d+\/?$/i : job.platform === "remember" ? /^\/job\/posting\/\d+\/?$/ : /^\/wd\/\d+\/?$/).test(path)) throw new Error("저장할 공고 주소를 확인해 주세요.")
   return { ...bookmark, job: { ...job, jobUrl } }
 }
 function changed() { window.dispatchEvent(new Event(searchBookmarksChanged)) }

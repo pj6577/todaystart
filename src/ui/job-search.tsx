@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { platformLabel, type ApplicationRecord } from "../core/model"
 import { applicationHistoryIndex, searchCompanyNameKey } from "../search/application-history"
-import { searchLimits, searchPlatforms, type SearchPlatform } from "../search/model"
+import { searchLimits, type SearchPlatform } from "../search/model"
 import { hasSearchFilters, type SearchFilters } from "../search/filters"
 import { readSearchPreferences, saveSearchPreferences, type SearchPreferences } from "../search/preferences"
 import { Icon } from "./components"
@@ -13,6 +13,8 @@ import { JobSearchFilters } from "./job-search-filters"
 import { JobSearchHistoryDialog } from "./job-search-history-dialog"
 import { useJobSearch } from "./use-job-search"
 import { useSearchBookmarks } from "./use-search-bookmarks"
+import { useSearchPlatformOrder } from "./use-search-platform-order"
+import { JobSearchPlatformTabs } from "./job-search-platform-tabs"
 import "./job-search.css"
 
 const failureLabels = { unreadable: "응답 확인 필요", blocked: "접근 제한", login_required: "로그인 필요", timeout: "응답 지연", error: "요청 실패" }
@@ -29,18 +31,22 @@ export function JobSearch({ records, generation }: { records: ApplicationRecord[
   const [nearEnd, setNearEnd] = useState(false)
   const [historyCompany, setHistoryCompany] = useState<{ name: string; key: string }>()
   const [showBookmarks, setShowBookmarks] = useState(false)
+  const { order: platformOrder, move: movePlatform, error: orderError } = useSearchPlatformOrder()
   const { bookmarks, toggle: toggleBookmark, error: bookmarkError, ready: bookmarksReady } = useSearchBookmarks(generation)
   const bookmarkedIds = useMemo(() => new Set(bookmarks.map(bookmark => bookmark.job.id)), [bookmarks])
   const sentinel = useRef<HTMLDivElement>(null)
   const lastAutoLoad = useRef("")
   const emptyAutoLoads = useRef(0)
-  const { sites, feed, paused, search, stop, clear, retry, loadMore, moreSites, busy } = useJobSearch()
+  const { sites, feed, batches, paused, search, stop, clear, retry, loadMore, moreSites, busy } = useJobSearch()
   const history = useMemo(() => applicationHistoryIndex(records), [records])
-  const sourceJobs = useMemo(() => showBookmarks ? bookmarks.map(bookmark => bookmark.job) : feed, [showBookmarks, bookmarks, feed])
+  const sourceJobs = useMemo(() => showBookmarks ? bookmarks.map(bookmark => bookmark.job)
+    : batches.flatMap(batch => platformOrder.flatMap(platform => batch.filter(job => job.platform === platform))), [showBookmarks, bookmarks, batches, platformOrder])
   const availableJobs = useMemo(() => excludeApplied ? sourceJobs.filter(job => !history.has(searchCompanyNameKey(job.companyName))) : sourceJobs, [sourceJobs, history, excludeApplied])
   const jobs = useMemo(() => availableJobs.filter(job => filter === "all" || job.platform === filter), [availableJobs, filter])
   const hasMore = !showBookmarks && moreSites.some(site => filter === "all" || site.platform === filter)
-  const visibleSites = showBookmarks ? searchPlatforms.filter(platform => sourceJobs.some(job => job.platform === platform)) : sites.map(site => site.platform)
+  const visibleSites = platformOrder.filter(platform => showBookmarks
+    ? sourceJobs.some(job => job.platform === platform)
+    : sites.some(site => site.platform === platform))
   const failures = sites.filter(site => site.status in failureLabels)
 
   useEffect(() => {
@@ -102,13 +108,13 @@ export function JobSearch({ records, generation }: { records: ApplicationRecord[
       <div className="job-search-results-toolbar">
       <div className="job-search-result-views">
       <Button variant="outline" className="job-search-bookmarks-view" aria-pressed={showBookmarks} onClick={() => { if (busy) stop(); setShowBookmarks(!showBookmarks); setFilter("all") }}><Icon name="bookmark" size={16} />북마크 <span>{bookmarks.length}</span></Button>
-      {(!!sites.length || showBookmarks) && <nav className="job-search-filters" aria-label="검색 결과 사이트 필터">{(["all", ...visibleSites] as const).map(platform => {
-        const count = platform === "all" ? availableJobs.length : availableJobs.filter(job => job.platform === platform).length
-        return <Button variant="outline" key={platform} data-search-platform={platform} data-search-status={platform === "all" || showBookmarks ? undefined : sites.find(site => site.platform === platform)?.status} data-result-count={count} aria-pressed={filter === platform} onClick={() => setFilter(platform)}>{platform !== "all" && <PlatformSymbol platform={platform} />}{platform === "all" ? "전체" : platformLabel[platform]}</Button>
-      })}</nav>}
+      {(!!sites.length || showBookmarks) && <JobSearchPlatformTabs order={platformOrder} value={filter} onSelect={setFilter} onMove={movePlatform} total={availableJobs.length}
+        items={visibleSites.map(platform => ({ platform, count: availableJobs.filter(job => job.platform === platform).length,
+          status: showBookmarks ? undefined : sites.find(site => site.platform === platform)?.status }))} />}
       </div>
       {busy && <Button variant="ghost" onClick={stop}><Icon name="close" size={14} />검색 중지</Button>}</div>
       {bookmarkError && <p role="alert" className="job-search-error">{bookmarkError}</p>}
+      {orderError && <p role="alert" className="job-search-error">{orderError}</p>}
       {!showBookmarks && !!failures.length && <div className="job-search-failures">{failures.map(site => <div className="job-search-failure" key={site.platform} role="status" aria-label={`${platformLabel[site.platform]} 검색 문제`} title={site.message}><span>{platformLabel[site.platform]} · {failureLabels[site.status as keyof typeof failureLabels]}</span><Button variant="link" size="sm" disabled={busy} onClick={() => retry(site)}>다시 시도</Button></div>)}</div>}
 
     {jobs.length ? <div className="job-search-results">{jobs.map(job => {

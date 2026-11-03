@@ -6,6 +6,7 @@ import { noteLinkIds } from "../core/note-mentions"
 import { TodayStartDatabase } from "./database"
 import { PlannerRepository } from "./planner-repository"
 import { BackupRepository } from "./backup-repository"
+import { hasJobkoreaAppliedCompany, JobkoreaAppliedStatusSchema, jobkoreaDetailId, type JobkoreaAppliedStatus } from "../core/jobkorea-applied-status"
 
 export { TodayStartDatabase } from "./database"
 export { BackupSchema } from "./backup-schema"
@@ -18,6 +19,16 @@ export class ApplicationRepository {
     this.backups = new BackupRepository(db, this)
   }
   list() { return this.db.applications.toArray() }
+  async addJobkoreaAppliedStatus(input: JobkoreaAppliedStatus): Promise<{ inserted: number; updated: number }> {
+    const posting = JobkoreaAppliedStatusSchema.parse(input), now = new Date().toISOString()
+    if (jobkoreaDetailId(posting.jobUrl) !== posting.sourceJobId || !normalizeCompanyName(posting.companyName)) throw new Error("지원완료 공고 정보를 확인해 주세요.")
+    return this.db.transaction("rw", [this.db.applications, this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards], async () => {
+      if (hasJobkoreaAppliedCompany(posting, await this.list())) return { inserted: 0, updated: 0 }
+      const value = { ...posting, platform: "jobkorea" as const, status: "applied" as const, evidence: "detail_status" as const,
+        normalizedCompanyName: normalizeCompanyName(posting.companyName), collectedAt: now, lastSeenAt: now, lastSyncedAt: now }
+      return this.merge([{ ...value, id: applicationIdentity(value) }])
+    })
+  }
   async createManual(input: unknown, submission?: Pick<ApplicationRecord, "submissionAttemptId" | "submissionStage" | "sourceJobId" | "internalGiNo" | "sourceApplicationId">) {
     const draft = ManualApplicationSchema.parse(input)
     const jobUrl = draft.jobUrl ? safeJobUrl(draft.jobUrl, draft.platform) : undefined
@@ -38,10 +49,24 @@ export class ApplicationRepository {
       const record = ApplicationSchema.parse(value)
       return ApplicationSchema.parse({ ...record, normalizedCompanyName: normalizeCompanyName(record.companyName), jobUrl: safeJobUrl(record.jobUrl, record.platform) })
     })
+    const detailKey = (record: ApplicationRecord) => JSON.stringify([record.sourceJobId, record.normalizedCompanyName, record.jobTitle.normalize("NFKC").replace(/\s+/g, " ").trim()])
+    const importedDetailEvents = new Map<string, Set<string>>()
+    for (const record of records) if (record.platform === "jobkorea" && record.evidence === "history_page" && record.sourceJobId && (record.sourceApplicationId || record.appliedAt)) {
+      const key = detailKey(record), events = importedDetailEvents.get(key) || new Set<string>()
+      events.add(applicationIdentity(record)); importedDetailEvents.set(key, events)
+    }
     let inserted = 0, updated = 0
     await this.db.transaction("rw", [this.db.applications, this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards], async () => {
       for (const record of records) {
         let existing = await this.db.applications.get(record.id)
+        let detailPromotion = false
+        if (!existing && record.platform === "jobkorea" && record.evidence === "history_page" && record.sourceJobId && (record.sourceApplicationId || record.appliedAt)) {
+          const key = detailKey(record)
+          if (importedDetailEvents.get(key)?.size === 1) {
+            const candidates = (await this.db.applications.where("sourceJobId").equals(record.sourceJobId).toArray()).filter(candidate => candidate.platform === "jobkorea" && detailKey(candidate) === key && candidate.evidence === "detail_status" && !candidate.appliedAt && !candidate.sourceApplicationId)
+            if (candidates.length === 1) { existing = candidates[0]; detailPromotion = true }
+          }
+        }
         const pendingAttempt = record.submissionAttemptId && record.status === "applied" ?
           (await this.db.applications.where("sourceJobId").equals(record.sourceJobId || "").toArray()).find(candidate => candidate.platform === record.platform && candidate.submissionAttemptId === record.submissionAttemptId && candidate.status === "pending_confirmation") : undefined
         if (!existing && pendingAttempt) existing = pendingAttempt
@@ -82,7 +107,8 @@ export class ApplicationRepository {
         }
         if (existing) {
           const merged = mergedRecord(existing, record)
-          if ((record.sourceApplicationId && !existing.sourceApplicationId) ||
+          if (detailPromotion) merged.evidence = record.evidence
+          if (detailPromotion || (record.sourceApplicationId && !existing.sourceApplicationId) ||
             (existing.status === "pending_confirmation" && record.status === "applied" && record.submissionAttemptId && record.submissionAttemptId === existing.submissionAttemptId)) {
             await this.db.applications.delete(existing.id)
             merged.id = record.id

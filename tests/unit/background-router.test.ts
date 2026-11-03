@@ -122,3 +122,41 @@ it("checks Wanted events against the live tab instead of a stale SPA sender URL"
   expect(await handle({ type: "submission", event: { kind: "wanted_completed", platform: "wanted", sourceJobId: "123" } }, sender)).toBe(false)
   expect(submissions.observe).not.toHaveBeenCalled()
 })
+
+const detailPosting = { sourceJobId: "50283630", companyName: "㈜이노가드", jobTitle: "[정규직]ERP 시스템 운영/개발", jobUrl: "https://www.jobkorea.co.kr/Recruit/GI_Read/50283630?sc=810" }
+const detailSender = () => ({ ...site, url: detailPosting.jobUrl })
+const detailRequest = () => ({ type: "jobkorea_applied_status", posting: detailPosting, dataGeneration: local.dataGeneration })
+it("잡코리아 상세 지원완료 보완은 Profile 없이도 권한·주소·세대를 확인하고 신규 기업만 추가한다", async () => {
+  Object.assign(chrome.tabs, { get: vi.fn(async () => ({ id: 7, url: detailPosting.jobUrl } as chrome.tabs.Tab)) })
+  vi.spyOn(submissions, "reconcile").mockResolvedValue()
+  expect(await handle(detailRequest(), detailSender())).toEqual({ inserted: 1, updated: 0 })
+  expect(await handle(detailRequest(), detailSender())).toEqual({ inserted: 0, updated: 0 })
+  expect(await repository.list()).toHaveLength(1)
+  expect((await repository.list())[0]).toMatchObject({ companyName: "㈜이노가드", evidence: "detail_status" })
+  expect((await repository.list())[0]!.appliedAt).toBeUndefined()
+  expect(submissions.reconcile).toHaveBeenCalledTimes(1)
+})
+it.each([
+  () => ui,
+  () => site,
+  () => ({ ...detailSender(), frameId: 1 }),
+  () => ({ ...detailSender(), url: "https://www.jobkorea.co.kr/Search/?gno=50283630" }),
+  () => ({ ...detailSender(), url: "https://www.jobkorea.co.kr/Recruit/GI_Read/999" })
+])("상세 지원완료 보완의 다른 출처·프레임·공고 요청을 거부한다", async sender => {
+  await expect(handle(detailRequest(), sender())).rejects.toThrow()
+  expect(await repository.list()).toHaveLength(0)
+})
+it("상세 지원완료 보완은 자동 기록·동의 끄기, 초기화와 페이지 이동을 존중한다", async () => {
+  const getTab = vi.fn(async () => ({ id: 7, url: detailPosting.jobUrl } as chrome.tabs.Tab))
+  Object.assign(chrome.tabs, { get: getTab })
+  await expect(handle({ ...detailRequest(), dataGeneration: crypto.randomUUID() }, detailSender())).rejects.toThrow("초기화")
+  await expect(handle({ ...detailRequest(), posting: { ...detailPosting, jobUrl: "https://www.jobkorea.co.kr/Recruit/GI_Read/999" } }, detailSender())).rejects.toThrow("주소")
+  local.settings = { ...structuredClone(defaultSettings), autoRecord: false }
+  await expect(handle(detailRequest(), detailSender())).rejects.toThrow("권한")
+  const settings = structuredClone(defaultSettings); settings.consent.jobkorea = false; local.settings = settings
+  await expect(handle(detailRequest(), detailSender())).rejects.toThrow("권한")
+  local.settings = structuredClone(defaultSettings)
+  getTab.mockResolvedValue({ id: 7, url: "https://www.jobkorea.co.kr/Recruit/GI_Read/999" } as chrome.tabs.Tab)
+  await expect(handle(detailRequest(), detailSender())).rejects.toThrow("변경")
+  expect(await repository.list()).toHaveLength(0)
+})

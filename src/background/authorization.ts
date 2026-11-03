@@ -13,5 +13,5 @@ export function authorizeRequest(request: Request, sender: chrome.runtime.Messag
   // Submission observers have their own frame and live-tab validation.
   if (request.type === "submission" || request.type === "submission_policy") return
   if (!access.extensionPage && (!access.platform || sender.frameId !== 0)) throw new Error("지원 사이트의 최상위 화면에서만 접근할 수 있습니다.")
-  if (!access.extensionPage && !["snapshot", "collect", "observe", "open_dashboard", "history_run"].includes(request.type)) throw new Error("기록 관리는 확장 프로그램 화면에서만 가능합니다.")
+  if (!access.extensionPage && !["snapshot", "collect", "observe", "jobkorea_applied_status", "open_dashboard", "history_run"].includes(request.type)) throw new Error("기록 관리는 확장 프로그램 화면에서만 가능합니다.")
 }

@@ -24,13 +24,13 @@ const path = require('node:path')
     ui.on('request', request => { if (request.url().startsWith('https://')) requests.push({ url: request.url(), method: request.method() }) })
     await ui.getByRole('searchbox', { name: '채용공고 검색어' }).fill('frontend')
     await ui.getByRole('button', { name: '통합검색', exact: true }).click()
-    await expect(ui.locator('[data-search-platform]:not([data-search-platform="all"])')).toHaveCount(3)
+    await expect(ui.locator('[data-search-platform]:not([data-search-platform="all"])')).toHaveCount(4)
     await expect(ui.locator('.job-search-demo')).toHaveAttribute('aria-busy', 'false', { timeout: 30000 })
     const results = await ui.locator('[data-search-platform]:not([data-search-platform="all"])').evaluateAll(buttons => buttons.map(button => ({ platform: button.dataset.searchPlatform, status: button.dataset.searchStatus, count: Number(button.dataset.resultCount) })))
     const successfulSites = results.filter(site => site.status === 'ok').length
-    const report = { query: 'frontend', successfulSites, complete: successfulSites === 3, results, cards: await ui.locator('.job-search-card').count(), requests }
+    const report = { query: 'frontend', successfulSites, complete: successfulSites === 4, results, cards: await ui.locator('.job-search-card').count(), requests }
     console.log(JSON.stringify(report, null, 2))
-    expect(requests).toHaveLength(3)
+    expect(requests).toHaveLength(4)
     expect(context.pages()).toHaveLength(2) // Chromium blank tab + extension UI; no source tabs.
     const out = path.resolve(__dirname, '../.tmp/search-demo')
     fs.mkdirSync(out, { recursive: true })
@@ -39,7 +39,7 @@ const path = require('node:path')
       await ui.evaluate(theme => document.documentElement.dataset.theme = theme, theme)
       await ui.screenshot({ path: path.join(out, `${theme}.png`), fullPage: false })
     }
-    // Live availability is reported independently; a partial result is not a three-site success.
+    // Live availability is reported independently; a partial result is not a four-site success.
     expect(successfulSites).toBeGreaterThan(0)
   } finally { await context.close() }
 })().catch(error => { console.error(error); process.exitCode = 1 })

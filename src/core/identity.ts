@@ -1,10 +1,12 @@
 import { normalizeCompanyName } from "./company"
 import type { ApplicationRecord } from "./model"
 
-type Identity = Pick<ApplicationRecord, "platform" | "sourceApplicationId" | "sourceJobId" | "companyName" | "jobTitle" | "appliedAt" | "jobUrl"> & Partial<Pick<ApplicationRecord, "status" | "sourceLabel" | "sourceCreatedAt" | "submissionAttemptId">>
+type Identity = Pick<ApplicationRecord, "platform" | "sourceApplicationId" | "sourceJobId" | "companyName" | "jobTitle" | "appliedAt" | "jobUrl"> & Partial<Pick<ApplicationRecord, "status" | "sourceLabel" | "sourceCreatedAt" | "submissionAttemptId" | "evidence">>
 export function applicationIdentity(record: Identity): string {
   if (record.sourceApplicationId) return JSON.stringify([record.platform, "application", record.sourceApplicationId])
   if (record.submissionAttemptId && record.status === "pending_confirmation") return JSON.stringify([record.platform, "attempt", record.submissionAttemptId])
+  // A detail status proves an existing application, not when it was submitted.
+  if (record.platform === "jobkorea" && record.evidence === "detail_status" && record.sourceJobId && !record.appliedAt) return JSON.stringify(["jobkorea", "detail-status", record.sourceJobId])
   if (record.platform === "wanted" && record.sourceCreatedAt && !record.appliedAt) return JSON.stringify(["wanted", "created", normalizeCompanyName(record.companyName), record.jobTitle.normalize("NFKC").trim(), record.sourceCreatedAt.slice(0, 10)])
   if (record.platform !== "manual" && record.status === "pending_confirmation" && (record.sourceJobId || record.jobUrl)) return JSON.stringify([record.platform, "pending", record.sourceJobId || record.jobUrl, record.jobTitle])
   // Without a date, same posting alone cannot prove that two applications are the same event.

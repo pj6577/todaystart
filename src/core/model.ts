@@ -36,7 +36,7 @@ export const ApplicationSchema = z.object({
   submissionAttemptId: z.string().uuid().optional(),
   submissionStage: z.enum(["started", "submitting", "confirmed", "unverified"]).optional(),
   status: StatusSchema,
-  evidence: z.enum(["history_page", "success_page", "submission_attempt", "submission_result", "manual"]),
+  evidence: z.enum(["history_page", "success_page", "submission_attempt", "submission_result", "manual", "detail_status"]),
   collectedAt: z.string().datetime(),
   lastSeenAt: z.string().datetime(),
   lastSyncedAt: z.string().datetime()

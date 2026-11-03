@@ -5,6 +5,7 @@ import { SubmissionEventSchema } from "../submission/model"
 import { NoteDraftSchema, EventDraftSchema } from "../core/planner"
 import { NoteLayoutChangeSchema } from "../core/note-board"
 import { EventKindChangeSchema } from "../core/event-kinds"
+import { JobkoreaAppliedStatusSchema } from "../core/jobkorea-applied-status"
 import type { Response } from "./contracts"
 
 export const CollectionSchema = z.object({
@@ -22,6 +23,7 @@ export const RequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("history_run"), operation: z.enum(["start", "stop", "retry"]), tabId: z.number().int().positive().optional() }).strict(),
   z.object({ type: z.literal("collect"), platform: PlatformSchema, result: CollectionSchema, automatic: z.boolean(), dataGeneration: z.string().uuid().optional(), runId: z.string().uuid().optional() }).strict(),
   z.object({ type: z.literal("observe"), record: ApplicationSchema }).strict(),
+  z.object({ type: z.literal("jobkorea_applied_status"), posting: JobkoreaAppliedStatusSchema, dataGeneration: z.string().uuid().optional() }).strict(),
   z.object({ type: z.literal("submission"), event: SubmissionEventSchema }).strict(),
   z.object({ type: z.literal("edit"), id: z.string(), changes: ApplicationSchema.pick({ companyName: true, jobTitle: true, appliedAt: true, status: true }) }).strict(),
   z.object({ type: z.literal("remove"), id: z.string(), linked: z.enum(["keep", "delete"]).optional() }).strict(),

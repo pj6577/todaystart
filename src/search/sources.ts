@@ -2,6 +2,7 @@ import { searchLimits, type SearchPlatform } from "./model"
 import { checkedSearchFilters, defaultSearchFilters, developmentRoles, hasSearchFilters, jobGroups, searchRegions, type SearchFilters } from "./filters"
 import jobkoreaGroups from "./jobkorea-groups.json"
 import { wantedSearchUrls } from "./wanted"
+import { rememberSearchUrls } from "./remember"
 
 export function searchUrls(platform: SearchPlatform, query: string, page = 1, selected: SearchFilters = defaultSearchFilters) {
   const filters = checkedSearchFilters(selected)
@@ -39,6 +40,7 @@ export function searchUrls(platform: SearchPlatform, query: string, page = 1, se
     if (filters.careerMax !== undefined) url.searchParams.set("careerMax", String(filters.careerMax))
     return { searchUrl: url.href, requestUrl: url.href, format: "html" as const }
   }
+  if (platform === "remember") return rememberSearchUrls(keyword, page, filters)
   if (platform !== "wanted") throw new Error("지원하지 않는 검색 사이트입니다.")
   return wantedSearchUrls(keyword, page, filters)
 }

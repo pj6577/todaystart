@@ -13,6 +13,12 @@ test.beforeEach(async () => {
   ui = await context.newPage()
   await ui.goto(`chrome-extension://${new URL(worker.url()).host}/options.html#search`)
   await expect(ui.getByRole("heading", { name: "공고 통합검색", exact: true })).toBeVisible()
+  // These legacy scenarios exercise the original three sources. Preserve an
+  // explicit saved selection, and stub Remember for cases that reset all sites.
+  await context.route("https://career-api.rememberapp.co.kr/**", route => route.fulfill({ contentType: "application/json", body: JSON.stringify({ data: [], meta: { page: route.request().postDataJSON()?.page ?? 1, total_pages: 0 } }) }))
+  await ui.evaluate(key => localStorage.setItem(key, JSON.stringify({ version: 1, query: "", filters: { group: [], role: [], region: [], career: [] }, sites: ["saramin", "jobkorea", "wanted"], excludeApplied: false })), jobSearchPreferencesKey)
+  await ui.reload()
+  await expect(ui.getByRole("heading", { name: "공고 통합검색", exact: true })).toBeVisible()
 })
 test.afterEach(async () => { await context.close() })
 
@@ -129,7 +135,7 @@ test("새 검색과 중지는 이전 응답이 현재 결과를 덮어쓰지 않
   await expect(ui.locator(".job-search-card")).toHaveCount(0)
 })
 
-test("조건 선택·3열 가운데 정렬·무한 스크롤·기존 카드 위치와 검색 조건 유지", async () => {
+test("조건 선택·3열 가운데 정렬·무한 스크롤·플랫폼 묶음 순서와 검색 조건 유지", async () => {
   await selectSaraminAndJobkorea()
   const requests: URL[] = []
   await context.route(/^https:\/\/www\.(saramin|jobkorea|wanted)\.co\.kr\//, async route => {
@@ -167,7 +173,10 @@ test("조건 선택·3열 가운데 정렬·무한 스크롤·기존 카드 위�
   await expect(ui.locator(".job-search-card")).toHaveCount(80)
   expect(requests).toHaveLength(4)
   expect(requests.slice(2).every(url => url.searchParams.get("loc_mcd") === "101000" || url.searchParams.get("local") === "I000")).toBe(true)
-  expect(await ui.locator(".job-search-card h3 a").evaluateAll(links => links.slice(0, 40).map(link => link.getAttribute("href")))).toEqual(firstLinks)
+  const nextLinks = await ui.locator(".job-search-card h3 a").evaluateAll(links => links.map(link => link.getAttribute("href")))
+  expect(nextLinks.slice(0, 40)).toEqual(firstLinks)
+  expect(nextLinks.slice(40, 60).every(link => new URL(link!).hostname === "www.saramin.co.kr")).toBe(true)
+  expect(nextLinks.slice(60).every(link => new URL(link!).hostname === "www.jobkorea.co.kr")).toBe(true)
   await ui.locator(".job-search-scroll-end").scrollIntoViewIfNeeded()
   await expect(ui.getByText("현재 검색 결과의 끝이에요")).toBeVisible()
   expect(requests).toHaveLength(4)
@@ -518,7 +527,7 @@ test("모든 조건은 같은 모달에서 전환하며 한 번의 적용으로 
   await panel.getByRole("button", { name: "초기화", exact: true }).click()
   await expect(panel.getByRole("checkbox", { name: "전국", exact: true })).toBeChecked()
   await panel.getByRole("tab", { name: "검색 사이트", exact: true }).click()
-  for (const label of ["사람인", "잡코리아", "원티드"]) await panel.getByRole("checkbox", { name: label, exact: true }).uncheck()
+  for (const label of ["사람인", "잡코리아", "원티드", "리멤버"]) await panel.getByRole("checkbox", { name: label, exact: true }).uncheck()
   await expect(panel.getByRole("button", { name: "적용", exact: true })).toBeDisabled()
   await ui.keyboard.press("Escape")
   await expect(ui.getByRole("button", { name: "서울 조건 해제", exact: true })).toBeVisible()

@@ -3,6 +3,24 @@ import { normalizeCompanyName, compareCompanies, CompanyMatcher } from "../../sr
 import { record } from "../helpers"
 
 describe("기업 정규화와 오탐 방지", () => {
+  it.each(["아인잡(AINJOB)", "AINJOB(아인잡)", "아인잡 （ＡＩＮＪＯＢ）", "(주)아인잡(Ainjob)"])("명시적 한영 병기의 이전 지원 안내: %s", companyName => {
+    const prior = record({ companyName: "(주)아인잡", normalizedCompanyName: "아인잡", companyIdentifier: "saramin:123" })
+    const matcher = new CompanyMatcher([prior])
+    expect(matcher.find({ platform: "wanted", companyName, companyIdentifier: "wanted:20542", jobTitle: "다른 직무" })).toMatchObject([{ confidence: "probable", record: prior }])
+    expect(new CompanyMatcher([{ ...prior, companyName }]).find({ platform: "jobkorea", companyName: "㈜아인잡", jobTitle: "다른 직무" })).toHaveLength(1)
+    // Matching for a warning does not change storage/deduplication semantics.
+    expect(normalizeCompanyName(companyName)).not.toBe("아인잡")
+    expect(compareCompanies({ companyName }, { companyName: "(주)아인잡" })).toBe("none")
+  })
+  it.each(["아인잡(부산)", "아인잡홀딩스", "아인잡(AINJOB Korea)", "아인잡(Seoul)", "아인잡(Holdings)", "아인잡(Lab)", "아인잡(AI)", "AINJOB(아인잡지점)", "다른기업(AINJOB)", "아인잡스(AINJOBS)", "아인잡(AINJOB)(부산)", "AINJOB"])("병기 아닌 설명·지점·다른 이름을 연결하지 않는다: %s", companyName => {
+    expect(new CompanyMatcher([record({ companyName: "(주)아인잡" })]).find({ platform: "wanted", companyName, jobTitle: "다른 직무" })).toEqual([])
+  })
+  it("병기 이름도 같은 플랫폼의 기업 ID 불일치를 무시하거나 미확정 이력을 완료 이력으로 보지 않는다", () => {
+    const prior = record({ platform: "wanted", companyName: "(주)아인잡", companyIdentifier: "wanted:1" })
+    const posting = { platform: "wanted" as const, companyName: "아인잡(AINJOB)", companyIdentifier: "wanted:2", jobTitle: "다른 직무" }
+    expect(new CompanyMatcher([prior]).find(posting, true)).toEqual([])
+    for (const status of ["pending_confirmation", "unknown", "cancelled"] as const) expect(new CompanyMatcher([{ ...prior, status }]).find({ ...posting, companyIdentifier: undefined })).toEqual([])
+  })
   it.each(["주식회사 헌터협회", "(주)헌터협회", "헌터 협회", "헌터협회(주)", "㈜헌터협회", "  헌터  협회  "])("법인 표기: %s", value => expect(normalizeCompanyName(value)).toBe("헌터협회"))
   it("Unicode와 대소문자를 정리한다", () => expect(normalizeCompanyName("ＡＣＭＥ Inc.")).toBe("acmeinc"))
   it.each(["헌터협회홀딩스", "헌터협회지주", "헌터협회자회사", "헌터협회(부산)"])("계열사와 지점을 동일시하지 않는다: %s", companyName => expect(compareCompanies({ companyName }, { companyName: "헌터협회" })).toBe("none"))

@@ -28,6 +28,12 @@
 .job-search-filters .ui-button[data-slot="button"] { height:calc(var(--job-search-control-height) - 10px); min-height:calc(var(--job-search-control-height) - 10px); gap:6px; border:0; border-radius:6px; padding:0 11px; color:var(--text-muted); background:transparent; }
 .job-search-filters .ui-button[aria-pressed="true"] { background:var(--selected); color:var(--text); }
 .job-search-filters .platform-symbol { width:16px; height:16px; }
+.job-search-platform-tab { position:relative; touch-action:none; user-select:none; cursor:grab; }
+.job-search-platform-tab.is-dragging { z-index:2; pointer-events:none; opacity:.7; cursor:grabbing; box-shadow:0 0 0 1px var(--border-strong); }
+.job-search-platform-tab[data-drop-side="before"] { box-shadow:inset 2px 0 var(--link); }
+.job-search-platform-tab[data-drop-side="after"] { box-shadow:inset -2px 0 var(--link); }
+.job-search-platform-grip { flex:none; opacity:.45; }
+.job-search-platform-tab:hover .job-search-platform-grip, .job-search-platform-tab:focus-visible .job-search-platform-grip { opacity:1; }
 .job-search-results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .job-search-card { display: flex; flex-direction: column; min-width: 0; min-height: 210px; padding: 22px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .job-search-card:hover { border-color: var(--border-strong); }

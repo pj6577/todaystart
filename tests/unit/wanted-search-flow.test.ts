@@ -119,3 +119,27 @@ it("같은 필터 화면에서 검색어를 유지하며 빈 대조를 제한해
   for (let tick = 0; tick < 3; tick++) await run(() => {})
   expect(calls).toBe(10)
 })
+
+it("원티드가 먼저 끝난 다음 묶음을 중지해도 대조 캐시를 같은 페이지에서 다시 표시한다", async () => {
+  let held = true, wantedCalls = 0
+  vi.stubGlobal("fetch", vi.fn(async (raw: string, init: RequestInit) => {
+    if (raw.includes("career-api.rememberapp.co.kr")) {
+      const page = JSON.parse(init.body as string).page
+      if (page === 2 && held) return new Promise<Response>((_, reject) => init.signal!.addEventListener("abort", () => reject(Error("aborted")), { once: true }))
+      return new Response(JSON.stringify({ data: [{ id: page, title: `리멤버 ${page}`, status: "published", organization: { name: "리멤버 기업" } }], meta: { page, total_pages: 2 } }))
+    }
+    wantedCalls++
+    const page = Number(new URL(raw).searchParams.get("offset")) === 0 ? 1 : 2
+    return response([page], page === 1)
+  }))
+  await run(() => search.search({ query: "React", filters }, ["wanted", "remember"]))
+  await run(() => search.loadMore("all"))
+  expect(wantedCalls).toBe(4)
+  expect(search.feed.map(job => job.id)).toEqual(["wanted:1", "remember:1"])
+  await run(() => search.stop())
+  held = false
+  await run(() => search.loadMore("all"))
+  expect(search.batches.map(batch => batch.map(job => job.id))).toEqual([["wanted:1", "remember:1"], ["wanted:2", "remember:2"]])
+  expect(wantedCalls).toBe(4)
+  expect(search.sites.every(site => site.page === 2 && !site.hasNext)).toBe(true)
+})

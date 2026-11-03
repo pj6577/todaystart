@@ -7,8 +7,23 @@ import { saveReport } from "../storage/settings"
 import type { RequestHandlers } from "./context"
 import { jobIdFromUrl, safeJobUrl } from "../core/urls"
 import type { ApplicationRecord } from "../core/model"
+import { jobkoreaDetailId } from "../core/jobkorea-applied-status"
 
 export const applications = {
+  async jobkorea_applied_status(request, { repository, settings, extensionPage, platform, sender, submissions }) {
+    if (extensionPage || platform !== "jobkorea" || !settings.autoRecord || !settings.consent.jobkorea || !sender.tab?.id) throw new Error("자동 기록 권한을 확인해 주세요.")
+    if (request.dataGeneration !== await getDataGeneration()) throw new Error("지원 기록이 초기화됐어요. 공고 페이지를 새로고침해 주세요.")
+    const id = request.posting.sourceJobId
+    if (!sender.url || jobkoreaDetailId(sender.url) !== id || jobkoreaDetailId(request.posting.jobUrl) !== id) throw new Error("지원완료 공고와 페이지 주소가 다릅니다.")
+    const tab = await chrome.tabs.get(sender.tab.id)
+    if (!tab.url || jobkoreaDetailId(tab.url) !== id) throw new Error("공고 페이지가 변경됐어요. 다시 확인해 주세요.")
+    const result = await repository.addJobkoreaAppliedStatus({ ...request.posting, jobUrl: safeJobUrl(sender.url, "jobkorea")! })
+    if (result.inserted) {
+      await submissions.reconcile()
+      await chrome.storage.local.set({ revision: crypto.randomUUID() })
+    }
+    return result
+  },
   async manual_create(request, { repository, submissions }) {
     if ((request.dataGeneration !== undefined || request.submissionAttemptId) && request.dataGeneration !== await getDataGeneration()) throw new Error("지원 기록이 초기화되었어요. 직접 추가 창을 닫고 다시 열어 주세요.")
     let linked: Pick<ApplicationRecord, "submissionAttemptId" | "submissionStage" | "sourceJobId" | "internalGiNo" | "sourceApplicationId"> | undefined
@@ -65,4 +80,4 @@ export const applications = {
     await chrome.storage.local.set({ revision: crypto.randomUUID() })
     return true
   }
-} satisfies Pick<RequestHandlers, "manual_create" | "collect" | "observe" | "edit" | "remove">
+} satisfies Pick<RequestHandlers, "jobkorea_applied_status" | "manual_create" | "collect" | "observe" | "edit" | "remove">
