@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { DomPlatformAdapter } from "../../src/platforms/adapter"
 import { PageLifecycle } from "../../src/platforms/page-lifecycle"
 import { PostingWarnings } from "../../src/platforms/posting-warnings"
-import { publicPostingProfileFor, wantedListingPostingProfile } from "../../src/platforms/public-postings"
+import { publicPostingProfileFor, wantedListingPostingProfile, wantedPostingAttributes } from "../../src/platforms/public-postings"
 import { defaultSettings } from "../../src/storage/settings"
 import { record, fixtureProfile } from "../helpers"
 import { wantedCard, wantedInspectedListing } from "../fixtures/wanted-inspected-listing"
@@ -97,7 +97,7 @@ describe("원티드 목록 카드의 이전 지원 안내", () => {
     const records = [record({ platform: "wanted", companyName: "미리디", jobTitle: "이전 직무" })]
     const refresh = vi.fn(() => {
       warnings.render(adapter.extractJobPostings(document), records, defaultSettings, "listing")
-      lifecycle!.observe(document.querySelector(wantedListingPostingProfile.root), false)
+      lifecycle!.observe(document.querySelector(wantedListingPostingProfile.root), false, wantedPostingAttributes)
     })
     lifecycle = new PageLifecycle({ refresh, routeChanged: vi.fn(), popState: vi.fn(), discoveryDuration: () => 15000, needsRepair: () => warnings.needsRepair() })
     lifecycle.start(); refresh()
@@ -125,5 +125,22 @@ describe("원티드 목록 카드의 이전 지원 안내", () => {
     expect(document.querySelectorAll("todaystart-warning")).toHaveLength(1)
     expect(document.querySelector("todaystart-warning")).not.toBe(first)
     lifecycle.dispose()
+  })
+  it("스타일·이미지 속성 변경은 다시 읽지 않고 회사·공고 데이터 변경은 읽는다", async () => {
+    vi.useFakeTimers()
+    const refresh = vi.fn()
+    lifecycle = new PageLifecycle({ refresh, routeChanged: vi.fn(), popState: vi.fn(), discoveryDuration: () => 15000, needsRepair: () => false })
+    lifecycle.start()
+    lifecycle.observe(document.querySelector(wantedListingPostingProfile.root), false, wantedPostingAttributes)
+    const card = document.querySelector('[data-cy="job-card"]')!
+    for (let index = 0; index < 20; index++) {
+      card.setAttribute("class", `animation-${index}`)
+      card.setAttribute("style", `opacity: ${index / 20}`)
+      await vi.advanceTimersByTimeAsync(250)
+    }
+    expect(refresh).not.toHaveBeenCalled()
+    card.querySelector("button")!.setAttribute("data-company-name", "변경된 기업")
+    await vi.advanceTimersByTimeAsync(250)
+    expect(refresh).toHaveBeenCalledTimes(1)
   })
 })
