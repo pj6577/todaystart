@@ -17,6 +17,7 @@ import { WantedHistoryReader } from "../platforms/wanted-history"
 import { SaraminApplyLayer } from "../platforms/saramin-apply-layer"
 import { jobkoreaAppliedDetail } from "../platforms/jobkorea-detail"
 import { hasJobkoreaAppliedCompany } from "../core/jobkorea-applied-status"
+import { wantedPostingAttributes } from "../platforms/public-postings"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://www.saramin.co.kr/*", "https://www.jobkorea.co.kr/*", "https://www.wanted.co.kr/*", "https://profile.rememberapp.co.kr/*", "https://career.rememberapp.co.kr/*"],
@@ -132,7 +133,9 @@ function observeRoot() {
   const profile = adapter.profile
   const selector = pageKind() === "history" ? profile?.historyRoot : adapter.postingProfile(location.href, document)?.root
   const root = platform === "jobkorea" && pageKind() === "detail" ? document.querySelector("main") : selector ? document.querySelector(selector) : pageKind() === "history" ? historyObservationRoot(document) : undefined
-  lifecycle.observe(root, state.collectionCode === "loading")
+  const kind = pageKind()
+  const attributes = platform === "wanted" && !profile && (kind === "listing" || kind === "detail") ? wantedPostingAttributes : undefined
+  lifecycle.observe(root, state.collectionCode === "loading", attributes)
 }
 async function sync(automatic: boolean, result?: CollectionResult, runId?: string): Promise<SyncReport> {
   const dataGeneration = snapshot?.dataGeneration

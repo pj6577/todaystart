@@ -41,6 +41,7 @@ export const rememberPostingProfile: PostingPageProfile = {
 // User-supplied Wanted /wdlist cards, 2026-11-02. Attribute names are stable
 // across CSS-module hashes. Mount outside the navigation link and bookmark.
 // Observing this list also catches cards appended by infinite scrolling.
+export const wantedPostingAttributes = ["data-cy", "data-company-name", "data-position-name", "data-position-id", "data-attribute-id", "href"]
 export const wantedListingPostingProfile: PostingPageProfile = {
   root: '[data-cy="job-list"]',
   posting: '[data-cy="job-card"]',

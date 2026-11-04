@@ -12,6 +12,7 @@ export class PageLifecycle {
   private started = false
   private disposed = false
   private root?: Element
+  private observedAttributes = ""
   private observer?: MutationObserver
   private parentObserver?: MutationObserver
   private discovery?: MutationObserver
@@ -79,12 +80,14 @@ export class PageLifecycle {
     if (this.active) this.readinessTimer = setTimeout(() => this.options.refresh(), duration)
   }
 
-  observe(root: Element | undefined | null, loading: boolean) {
+  observe(root: Element | undefined | null, loading: boolean, attributeFilter?: string[]) {
     if (!this.active) return
-    if (root !== this.root) {
+    const attributes = JSON.stringify(attributeFilter || null)
+    if (root !== this.root || attributes !== this.observedAttributes) {
       const previousRoot = this.root
       this.observer?.disconnect()
       this.root = root || undefined
+      this.observedAttributes = attributes
       if (root) {
         this.parentObserver?.disconnect()
         this.observer = new MutationObserver(mutations => {
@@ -92,7 +95,7 @@ export class PageLifecycle {
             (m.type === "childList" && [...m.addedNodes, ...m.removedNodes].every(n => n instanceof Element && (n.tagName === "TODAYSTART-WARNING" || n.hasAttribute("data-todaystart-owned")))))
           if (!ownedOnly || this.options.needsRepair()) this.schedule()
         })
-        this.observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true })
+        this.observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true, ...(attributeFilter ? { attributeFilter } : {}) })
         if (root.parentElement) {
           this.parentObserver = new MutationObserver(this.schedule)
           this.parentObserver.observe(root.parentElement, { childList: true })

@@ -1,6 +1,7 @@
 import type { PlasmoCSConfig } from "plasmo"
 import { rpc } from "../messaging/protocol"
 import { applicationPage, SubmissionContextSchema, type SubmissionEvent } from "../submission/model"
+import { WantedSubmissionObserver } from "../platforms/wanted-submission-observer"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://www.wanted.co.kr/*"],
@@ -35,7 +36,7 @@ function visible(element: HTMLElement) {
   return true
 }
 function inspect() {
-  if (!enabled) return
+  if (!enabled || document.hidden) return
   const page = applicationPage(location.href)
   if (page?.platform !== "wanted" || !page.jobId) return
   if (page.result) {
@@ -48,7 +49,7 @@ function inspect() {
     }).catch(() => retry(id)).finally(() => completing.delete(id))
     return
   }
-  for (const button of document.querySelectorAll<HTMLButtonElement>(submitSelector)) {
+  for (const button of observation.buttons()) {
     if (entered.has(button) || !visible(button)) continue
     const context = metadata(button)
     if (!context) continue
@@ -59,7 +60,7 @@ function inspect() {
 }
 function retry(id: string) {
   failures.set(id, (failures.get(id) || 0) + 1)
-  if ((failures.get(id) || 0) < 4) setTimeout(inspect, 500)
+  if ((failures.get(id) || 0) < 4) observation.schedule(500)
 }
 document.addEventListener("click", event => {
   // The worker checks the persisted policy too. Do not lose a fast trusted
@@ -75,25 +76,16 @@ document.addEventListener("click", event => {
   send({ kind: "wanted_submit", platform: "wanted", context })
 }, true)
 
+const observation = new WantedSubmissionObserver(submitSelector, inspect)
 function policy() {
   void rpc({ type: "submission_policy" }).then(value => {
+    if (enabled !== value.enabled) failures.clear()
     enabled = value.enabled
-    failures.clear()
-    inspect()
+    observation.setEnabled(value.enabled)
   }).catch(() => undefined)
 }
 chrome.runtime.onMessage.addListener((message, sender) => {
   if (sender.id === chrome.runtime.id && !sender.tab && message?.type === "DATA_CHANGED") policy()
 })
-const observer = new MutationObserver(inspect)
-function observe() {
-  if (document.documentElement) observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "hidden", "aria-hidden", "disabled", "aria-disabled"] })
-  inspect()
-}
-document.addEventListener("DOMContentLoaded", observe, { once: true })
-observe()
-window.addEventListener("popstate", inspect)
-window.addEventListener("pageshow", inspect)
-// Wanted can pushState without a full document load or a DOM mutation.
-setInterval(inspect, 1000)
+observation.start()
 policy()
