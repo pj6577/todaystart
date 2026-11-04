@@ -2,6 +2,8 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { applicationPage } from "../../src/submission/model"
 import { SubmissionTracker } from "../../src/submission/tracker"
 import { ApplicationRepository, TodayStartDatabase } from "../../src/storage/repository"
+import { parseBuiltInHistory } from "../../src/platforms/history"
+import { enrichWantedRecords } from "../../src/platforms/wanted-history"
 
 const jobId = "392849"
 const posting = { sourceJobId: jobId, companyName: "가상 원티드 기업", jobTitle: "프론트엔드 개발자", jobUrl: `https://www.wanted.co.kr/wd/${jobId}` }
@@ -53,6 +55,24 @@ it("persists metadata and final click together even without a preceding modal-en
   expect((await tracker.snapshot())[0]).toMatchObject({ stage: "submitting", context: posting })
   expect(await tracker.observe(completed, sender(true))).toBe(true)
   expect((await repository.list())[0]).toMatchObject({ companyName: posting.companyName, status: "applied", sourceJobId: jobId })
+})
+it("실제 완료 추적 → 지원 현황 DOM → API 보강 → 늦은 문맥 수신을 한 지원에 반영한다", async () => {
+  await tracker.observe({ kind: "wanted_submit", platform: "wanted", context: posting }, sender())
+  await tracker.observe(completed, sender(true))
+  const observed = (await repository.list())[0]!
+  const [year, month, day] = observed.appliedAt!.split("-")
+  const doc = new DOMParser().parseFromString(`<div class="List_List_table__1K_8K"><ul><li class="List_List_table_tr__fYmQ9"><div role="presentation"><span class="List_List_table_td_company_name__u5tEF">${posting.companyName}</span><span class="List_List_table_td_position__noXIK">${posting.jobTitle}</span><span class="List_List_table_td_create_time__srwiA">${year}. ${Number(month)}. ${Number(day)}</span><span class="List_List_table_td_status__sFQdf">접수</span></div></li></ul></div>`, "text/html")
+  Object.defineProperty(doc, "URL", { value: "https://www.wanted.co.kr/status/applications/applied" })
+  const imported = parseBuiltInHistory(doc, "wanted").records
+  expect(imported).toHaveLength(1)
+  expect(await repository.merge(imported)).toEqual({ inserted: 0, updated: 1 })
+  const enriched = enrichWantedRecords(imported, { applications: [{ id: 800010, job_id: Number(jobId), company_name: posting.companyName, job: { position: posting.jobTitle }, create_time: observed.appliedAt + "T10:00:00", status: "complete", open_time: null }] })
+  await repository.merge(enriched); await repository.merge(imported)
+  tracker = new SubmissionTracker(repository)
+  await metadata(); await tracker.observe(completed, sender(true)); await tracker.snapshot()
+  const saved = await repository.list()
+  expect(saved).toHaveLength(1)
+  expect(saved[0]).toMatchObject({ sourceApplicationId: "800010", appliedAt: observed.appliedAt, appliedAtTime: observed.appliedAtTime, sourceCreatedAt: observed.appliedAt + "T10:00:00", submissionAttemptId: observed.submissionAttemptId, status: "applied" })
 })
 it("완료 주소를 직접 열거나 모달만 연 상태에서는 새 완료로 세지 않는다", async () => {
   expect(await tracker.observe(completed, sender(true))).toBe(false)
