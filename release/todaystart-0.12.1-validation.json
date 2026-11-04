@@ -1,0 +1,35 @@
+{
+  "file": "release/todaystart-0.12.1.zip",
+  "version": "0.12.1",
+  "sourceCommit": "fec56ed6c3421b8ad9f546299626a6c22af19234",
+  "bytes": 2819144,
+  "files": 46,
+  "sha256": "7f2fbd213db8ddbd2bf8d9c8d8dd7f72dadee82d69edb7e05cd68727d5d30cc8",
+  "archiveIntegrity": "passed",
+  "buildBytesMatch": true,
+  "manifestResourcesPresent": true,
+  "permissionsComparedWith": "0.12.0",
+  "extensionPermissionsUnchanged": true,
+  "addedHostPermissions": [],
+  "removedHostPermissions": [],
+  "contentRegistrationsUnchanged": true,
+  "licensesIncluded": true,
+  "excludedHistoricalAssets": true,
+  "secretPatternMatches": [],
+  "sourcePatternAudit": {
+    "trackedTextFiles": 381,
+    "matches": []
+  },
+  "validation": {
+    "typecheck": "passed",
+    "build": "passed",
+    "unitTests": 769,
+    "failedUnitTests": 0,
+    "browserTests": "not run at user request; user will review the screen",
+    "wantedRegression": "Received status, observed completion and DOM/API history reconciliation, duplicate repair, planner links and backup round-trip passed"
+  },
+  "limitations": [
+    "No live browser or pixel layout checks were run at user request",
+    "Wanted history and completion integration was tested with reconstructed DOM and synthetic API responses"
+  ]
+}
