@@ -7,6 +7,7 @@ import { TodayStartDatabase } from "./database"
 import { PlannerRepository } from "./planner-repository"
 import { BackupRepository } from "./backup-repository"
 import { hasJobkoreaAppliedCompany, JobkoreaAppliedStatusSchema, jobkoreaDetailId, type JobkoreaAppliedStatus } from "../core/jobkorea-applied-status"
+import { wantedHistoryKey, wantedIdentifiersAgree, wantedSubmissionHistoryPairs } from "./wanted-reconciliation"
 
 export { TodayStartDatabase } from "./database"
 export { BackupSchema } from "./backup-schema"
@@ -42,7 +43,10 @@ export class ApplicationRepository {
     }
     const id = applicationIdentity(record)
     await this.merge([{ ...record, id }])
-    return this.db.applications.get(id)
+    const saved = await this.db.applications.get(id)
+    if (saved) return saved
+    const link = await this.db.applicationLinks.where("aliases").equals(id).first()
+    return link ? this.db.applications.get(link.recordId) : undefined
   }
   async merge(values: unknown[]): Promise<{ inserted: number; updated: number }> {
     const records = values.map(value => {
@@ -57,8 +61,17 @@ export class ApplicationRepository {
     }
     let inserted = 0, updated = 0
     await this.db.transaction("rw", [this.db.applications, this.db.applicationLinks, this.db.notes, this.db.events, this.db.noteBoards], async () => {
+      const insertedIds = new Set<string>()
       for (const record of records) {
         let existing = await this.db.applications.get(record.id)
+        if (!existing && record.platform === "wanted") {
+          const alias = await this.db.applicationLinks.where("aliases").equals(record.id).first()
+          const linked = alias && await this.db.applications.get(alias.recordId)
+          if (linked?.platform === "wanted" && wantedIdentifiersAgree(linked, record) &&
+            ((record.submissionAttemptId && linked.submissionAttemptId === record.submissionAttemptId) ||
+              (record.sourceApplicationId && linked.sourceApplicationId === record.sourceApplicationId) ||
+              (wantedHistoryKey(record) && wantedHistoryKey(linked) === wantedHistoryKey(record)))) existing = linked
+        }
         let detailPromotion = false
         if (!existing && record.platform === "jobkorea" && record.evidence === "history_page" && record.sourceJobId && (record.sourceApplicationId || record.appliedAt)) {
           const key = detailKey(record)
@@ -81,12 +94,10 @@ export class ApplicationRepository {
           existing = await this.db.applications.get(legacyId)
         }
         if (!existing && record.platform === "wanted" && record.sourceCreatedAt) {
-          const legacyId = applicationIdentity({ ...record, sourceApplicationId: undefined })
-          if (record.sourceApplicationId) existing = await this.db.applications.get(legacyId)
-          else {
-            const candidates = (await this.db.applications.where("normalizedCompanyName").equals(record.normalizedCompanyName).toArray()).filter(candidate => candidate.platform === "wanted" && candidate.sourceApplicationId && applicationIdentity({ ...candidate, sourceApplicationId: undefined }) === legacyId)
-            if (candidates.length === 1) existing = candidates[0]
-          }
+          const key = wantedHistoryKey(record)
+          const candidates = key ? (await this.db.applications.where("normalizedCompanyName").equals(record.normalizedCompanyName).toArray())
+            .filter(candidate => wantedHistoryKey(candidate) === key && wantedIdentifiersAgree(candidate, record)) : []
+          if (candidates.length === 1) existing = candidates[0]
         }
         // The inspected Jobkorea button has a clean title, while the old link
         // parser included its trailing deadline. Promote that precise legacy
@@ -112,12 +123,26 @@ export class ApplicationRepository {
             (existing.status === "pending_confirmation" && record.status === "applied" && record.submissionAttemptId && record.submissionAttemptId === existing.submissionAttemptId)) {
             await this.db.applications.delete(existing.id)
             merged.id = record.id
+            if (insertedIds.delete(existing.id)) insertedIds.add(merged.id)
           }
           await this.db.applications.put(merged)
           await this.linkApplication(merged.id, [existing.id, record.id, ...(pendingAttempt ? [pendingAttempt.id] : [])])
           if (pendingAttempt && pendingAttempt.id !== merged.id) await this.db.applications.delete(pendingAttempt.id)
           updated++
-        } else { await this.db.applications.put(record); await this.linkApplication(record.id); inserted++ }
+        } else { await this.db.applications.put(record); await this.linkApplication(record.id); insertedIds.add(record.id); inserted++ }
+      }
+      if (records.some(record => record.platform === "wanted")) {
+        // Reconcile after the whole batch so two imported applications cannot
+        // claim one completion based on which row happened to arrive first.
+        const pairs = wantedSubmissionHistoryPairs(await this.db.applications.where("platform").equals("wanted").toArray())
+        for (const { submission, history } of pairs) {
+          const merged = mergedRecord(submission, history)
+          merged.id = history.sourceApplicationId ? history.id : submission.id
+          await this.db.applications.bulkDelete([submission.id, history.id].filter(id => id !== merged.id))
+          await this.db.applications.put(merged)
+          await this.linkApplication(merged.id, [submission.id, history.id])
+          if (insertedIds.has(submission.id) || insertedIds.has(history.id)) { inserted--; updated++ }
+        }
       }
     })
     return { inserted, updated }
