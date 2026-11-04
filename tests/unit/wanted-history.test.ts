@@ -5,6 +5,7 @@ import { historyPagination } from "../../src/platforms/history-pagination"
 import { ApplicationRepository, TodayStartDatabase } from "../../src/storage/repository"
 import { wantedInspectedHistory, wantedInspectedResponse } from "../fixtures/wanted-inspected-history"
 import { applicationReadingStats } from "../../src/ui/dashboard-stats"
+import { recordStatusLabel, requiresStatusReview } from "../../src/core/model"
 
 const url = "https://www.wanted.co.kr/status/applications/applied?page=1&offset=0&limit=10"
 const api = "https://www.wanted.co.kr/api/v1/applications?user_id=100&page=1&offset=0&limit=10"
@@ -13,7 +14,59 @@ function doc(page = 1) {
   Object.defineProperty(d, "URL", { value: url.replace("page=1&offset=0", `page=${page}&offset=${(page - 1) * 10}`) })
   return d
 }
+function statusDoc(status = "접수") {
+  const d = doc()
+  for (const row of d.querySelectorAll("li")) {
+    row.className = "List_List_table_tr__fYmQ9"
+    row.querySelector('[class*="List_List_table_td_status__"]')!.textContent = status
+  }
+  return d
+}
 describe("원티드 공유 조사 기반 DOM과 선택적 API 보강", () => {
+  it.each(["접수", "접수 완료", "지원 완료", "서류 통과", "최종 합격", "불합격"])("진행상태 %s를 지원 기록으로 읽고 원본 문구를 표시한다", sourceStatus => {
+    const result = parseBuiltInHistory(statusDoc(sourceStatus), "wanted")
+    expect(result.records).toHaveLength(2)
+    for (const [index, record] of result.records.entries()) {
+      expect(record).toMatchObject({ status: "applied", sourceStatus, readStatus: "unknown", sourceCreatedAt: `2026-09-${11 + index}` })
+      expect(record.appliedAt).toBeUndefined()
+      expect(recordStatusLabel(record)).toBe(sourceStatus)
+      expect(requiresStatusReview(record)).toBe(false)
+    }
+  })
+  it.each(["지원 취소", "접수 취소"])("%s를 취소 기록으로 유지한다", sourceStatus => {
+    expect(parseBuiltInHistory(statusDoc(sourceStatus), "wanted").records.every(record => record.status === "cancelled")).toBe(true)
+  })
+  it.each(["접수 예정", "접수 여부 미확인", "불합격 여부 미확인", "새로운 상태"])("확인되지 않은 문구 %s를 완료로 추정하지 않는다", sourceStatus => {
+    const records = parseBuiltInHistory(statusDoc(sourceStatus), "wanted").records
+    expect(records).toHaveLength(2)
+    expect(records.every(record => record.status === "unknown")).toBe(true)
+  })
+  it("API 보강에서 확인된 상태 문구와 내부 상태를 함께 갱신한다", () => {
+    const records = parseBuiltInHistory(statusDoc(), "wanted").records.map(record => ({ ...record, status: "unknown" as const }))
+    const payload = wantedInspectedResponse()
+    payload.applications[0]!.status = "complete"
+    const enriched = enrichWantedRecords(records, payload)
+    expect(enriched[0]).toMatchObject({ status: "applied", sourceStatus: "지원 완료", readStatus: "read" })
+    expect(enriched[1]).toMatchObject({ status: "applied", sourceStatus: "불합격", readStatus: "unread" })
+    payload.applications.forEach(row => { row.status = "unrecognized" })
+    expect(enrichWantedRecords(parseBuiltInHistory(statusDoc(), "wanted").records, payload).every(record => record.status === "applied" && record.sourceStatus === "접수")).toBe(true)
+  })
+  it("상태 불명으로 저장된 접수 기록을 다시 수집하면 중복 없이 복구하고 재수집에도 유지한다", async () => {
+    const repository = new ApplicationRepository(new TodayStartDatabase("wanted-received-" + crypto.randomUUID()))
+    try {
+      const records = parseBuiltInHistory(statusDoc(), "wanted").records
+      const legacy = records.map(record => ({ ...record, status: "unknown", lastSeenAt: "2026-01-01T00:00:00.000Z" }))
+      await repository.merge(legacy)
+      expect(await repository.merge(records)).toEqual({ inserted: 0, updated: 2 })
+      expect((await repository.list()).every(record => record.status === "applied" && record.sourceStatus === "접수")).toBe(true)
+      await repository.merge(enrichWantedRecords(records, { applications: wantedInspectedResponse().applications.map(row => ({ ...row, status: "complete" })) }))
+      await repository.merge(records)
+      const saved = await repository.list()
+      expect(saved).toHaveLength(2)
+      expect(saved.every(record => record.status === "applied" && !record.appliedAt && record.sourceApplicationId)).toBe(true)
+      expect(saved.map(record => record.companyName).sort()).toEqual(records.map(record => record.companyName).sort())
+    } finally { await repository.db.delete() }
+  })
   it("링크 없는 ul/li 행 2건을 읽고 작성일을 지원일로 저장하지 않는다", () => {
     const d = doc(), first = parseBuiltInHistory(d, "wanted"), again = parseBuiltInHistory(d, "wanted")
     expect(first.records).toHaveLength(2)
@@ -49,7 +102,8 @@ describe("원티드 공유 조사 기반 DOM과 선택적 API 보강", () => {
   })
   it("API가 거절되면 DOM 기록을 그대로 반환하고 실패 요청을 반복하지 않는다", async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(new Response("", { status: 401 }))
-    const reader = new WantedHistoryReader(() => [api], request), d = doc(), result = parseBuiltInHistory(d, "wanted")
+    const reader = new WantedHistoryReader(() => [api], request), d = statusDoc(), result = parseBuiltInHistory(d, "wanted")
+    expect(result.records.every(record => record.status === "applied" && record.sourceStatus === "접수")).toBe(true)
     expect(await reader.read(d, result)).toEqual(result)
     expect(await reader.read(d, result)).toEqual(result)
     expect(request).toHaveBeenCalledTimes(1)

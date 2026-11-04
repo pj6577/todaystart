@@ -8,6 +8,7 @@ import { historyPagination, isBuiltInHistoryUrl } from "./history-pagination"
 import { platformDefinitions } from "../core/platforms"
 import { historyText, visibleHistoryRow as visibleRow } from "./history-dom"
 import { rememberHistoryRoot, rememberHistoryRows, rememberRecord } from "./remember-history"
+import { wantedApplicationStatus } from "./wanted-status"
 export { isBuiltInHistoryUrl } from "./history-pagination"
 export { historyText } from "./history-dom"
 
@@ -45,7 +46,7 @@ function wantedRecord(row: Element, base: string): ApplicationRecord | undefined
   const record = {
     platform: "wanted" as const, companyName, normalizedCompanyName: normalizeCompanyName(companyName), jobTitle,
     sourceCreatedAt, sourceStatus, readStatus: "unknown" as const,
-    status: /취소/.test(sourceStatus) ? "cancelled" as const : /지원\s*완료|서류\s*통과|최종\s*합격|불합격/.test(sourceStatus) ? "applied" as const : "unknown" as const,
+    status: wantedApplicationStatus(sourceStatus),
     evidence: "history_page" as const, collectedAt: now, lastSeenAt: now, lastSyncedAt: now
   }
   const parsed = ApplicationSchema.safeParse({ ...record, id: applicationIdentity(record) })
