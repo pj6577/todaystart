@@ -2,6 +2,7 @@ import { ApplicationSchema, DateSchema, type ApplicationRecord, type CollectionR
 import { applicationIdentity } from "../core/identity"
 import { normalizeCompanyName } from "../core/company"
 import { isBuiltInHistoryUrl } from "./history-pagination"
+import { wantedApplicationStatus } from "./wanted-status"
 
 const labels: Record<string, string> = { complete: "지원 완료", pass: "서류 통과", hire: "최종 합격", reject: "불합격" }
 const key = (record: Pick<ApplicationRecord, "companyName" | "jobTitle" | "sourceCreatedAt">) => JSON.stringify([normalizeCompanyName(record.companyName), record.jobTitle.trim(), record.sourceCreatedAt?.slice(0, 10)])
@@ -28,7 +29,9 @@ function applyCandidates(records: ApplicationRecord[], candidates: ReturnType<ty
   return records.map(record => {
     const matches = candidates.filter(candidate => key(candidate) === key(record))
     if (matches.length !== 1 || records.filter(other => key(other) === key(record)).length !== 1) return record
-    const match = matches[0]!, candidate = { ...match, sourceStatus: match.sourceStatus || record.sourceStatus }
+    const match = matches[0]!, sourceStatus = match.sourceStatus || record.sourceStatus
+    const status = wantedApplicationStatus(sourceStatus || "")
+    const candidate = { ...match, sourceStatus, status: status === "unknown" ? record.status : status }
     const parsed = ApplicationSchema.safeParse({ ...record, ...candidate, id: applicationIdentity({ ...record, ...candidate }) })
     return parsed.success ? parsed.data : record
   })
