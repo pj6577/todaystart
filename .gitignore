@@ -34,6 +34,8 @@ release/*
 !release/todaystart-0.11.4-validation.json
 !release/todaystart-0.12.0.sha256
 !release/todaystart-0.12.0-validation.json
+!release/todaystart-0.12.1.sha256
+!release/todaystart-0.12.1-validation.json
 
 # Only curated documentation and representative screenshots are tracked.
 docs/*
@@ -51,6 +53,7 @@ docs/*
 !docs/validation-0.11.3.md
 !docs/validation-0.11.4.md
 !docs/validation-0.12.0.md
+!docs/validation-0.12.1.md
 !docs/remember-search.md
 !docs/validation-saramin-completion-layout.md
 !docs/job-search-demo.md
