@@ -21,6 +21,18 @@ afterEach(() => {
 })
 
 describe("원티드 목록 카드의 이전 지원 안내", () => {
+  it("워시스왓 서비스명 병기 카드에도 다른 경로의 Frontend Engineer 지원을 표시한다", () => {
+    document.body.innerHTML = `<ul data-cy="job-list">${wantedCard(900101, "워시스왓(세탁특공대)", "Frontend Engineer")}</ul>`
+    const prior = record({ platform: "saramin", companyName: "(주)워시스왓", jobTitle: "이전에 지원한 프론트엔드 직무", appliedAt: "2026-11-01" })
+    const postings = new DomPlatformAdapter("wanted").extractJobPostings(document)
+    expect(warnings.render(postings, [prior], defaultSettings, "listing").matches).toBe(1)
+    const host = document.querySelector("todaystart-warning")!
+    expect(host.parentElement).toBe(document.querySelector('[data-cy="job-card"]'))
+    expect(host.closest("a,button")).toBeNull()
+    expect(host.shadowRoot?.querySelector("summary")?.textContent).toContain("사람인 지원 이력 있음")
+    expect(host.shadowRoot?.textContent).toContain("이전에 지원한 프론트엔드 직무")
+    expect(host.shadowRoot?.textContent).toContain("2026-11-01")
+  })
   it("사람인의 (주)아인잡 지원을 원티드 아인잡(AINJOB) 카드에 다른 직무여도 표시한다", () => {
     document.body.innerHTML = `<ul data-cy="job-list">${wantedCard(325032, "아인잡(AINJOB)", "WEB Front 개발 리더 (3~5년)")}</ul>`
     const prior = record({ platform: "saramin", companyName: "(주)아인잡", normalizedCompanyName: "아인잡", jobTitle: "프론트엔드 개발자 (경력)", appliedAt: "2026-10-30", readStatus: "unknown" })

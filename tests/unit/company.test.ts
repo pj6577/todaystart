@@ -3,6 +3,24 @@ import { normalizeCompanyName, compareCompanies, CompanyMatcher } from "../../sr
 import { record } from "../helpers"
 
 describe("기업 정규화와 오탐 방지", () => {
+  it.each(["워시스왓(세탁특공대)", "(주)워시스왓 (세탁 특공대)", "워시스왓（세탁특공대） 주식회사"])("회사·서비스명 병기의 이전 지원 안내: %s", companyName => {
+    const prior = record({ companyName: "(주)워시스왓", companyIdentifier: "saramin:1", jobTitle: "Frontend Engineer" })
+    const before = structuredClone(prior)
+    expect(new CompanyMatcher([prior]).find({ platform: "wanted", companyName, companyIdentifier: "wanted:2", jobTitle: "다른 직무" })).toMatchObject([{ confidence: "probable", record: prior }])
+    expect(new CompanyMatcher([{ ...prior, companyName }]).find({ platform: "jobkorea", companyName: "㈜워시스왓", jobTitle: "다른 직무" })).toHaveLength(1)
+    expect(compareCompanies({ companyName }, { companyName: "(주)워시스왓" })).toBe("none")
+    expect(normalizeCompanyName(companyName)).toBe("워시스왓(세탁특공대)")
+    expect(prior).toEqual(before)
+  })
+  it.each(["워시스왓(부산)", "워시스왓(부산지점)", "워시스왓(다른서비스)", "워시스왓홀딩스(세탁특공대)", "다른회사(세탁특공대)", "워시스왓(세탁특공대)(부산)", "세탁특공대"])("등록된 조합 이외의 괄호 표기는 임의로 지우지 않는다: %s", companyName => {
+    expect(new CompanyMatcher([record({ companyName: "(주)워시스왓" })]).find({ platform: "wanted", companyName, jobTitle: "Frontend Engineer" })).toEqual([])
+  })
+  it("회사·서비스명 별칭도 기업 ID 충돌과 미확정 지원 상태를 무시하지 않는다", () => {
+    const prior = record({ platform: "wanted", companyName: "(주)워시스왓", companyIdentifier: "wanted:1" })
+    const posting = { platform: "wanted" as const, companyName: "워시스왓(세탁특공대)", companyIdentifier: "wanted:2", jobTitle: "Frontend Engineer" }
+    expect(new CompanyMatcher([prior]).find(posting, true)).toEqual([])
+    for (const status of ["pending_confirmation", "unknown", "cancelled"] as const) expect(new CompanyMatcher([{ ...prior, status }]).find({ ...posting, companyIdentifier: undefined })).toEqual([])
+  })
   it.each(["아인잡(AINJOB)", "AINJOB(아인잡)", "아인잡 （ＡＩＮＪＯＢ）", "(주)아인잡(Ainjob)"])("명시적 한영 병기의 이전 지원 안내: %s", companyName => {
     const prior = record({ companyName: "(주)아인잡", normalizedCompanyName: "아인잡", companyIdentifier: "saramin:123" })
     const matcher = new CompanyMatcher([prior])

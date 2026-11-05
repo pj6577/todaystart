@@ -13,10 +13,18 @@ export function normalizeCompanyName(value: string): string {
     .replace(/[\s·.,_-]/g, "")
 }
 
-// Display matching only. Persisted names, application identities and merge keys
-// keep normalizeCompanyName; an explicit bilingual pair may share its Korean name.
+// User-provided company/service spelling pairs, for display matching only.
+// Do not infer corporate identity by removing arbitrary parenthetical text.
+const companyServiceDisplayAliases = new Map([
+  ["워시스왓(세탁특공대)", "워시스왓"]
+])
+
+// Persisted names, application identities and merge keys keep normalizeCompanyName.
+// Only display aliases and explicit bilingual pairs share a comparison key.
 export function companyMatchNameKey(value: string): string {
   const name = normalizeCompanyName(value)
+  const alias = companyServiceDisplayAliases.get(name)
+  if (alias) return alias
   const pair = /^([^()]+)\(([^()]+)\)$/.exec(name)
   if (!pair) return name
   const korean = (part: string) => /^[가-힣0-9&'’]+$/.test(part) && (part.match(/[가-힣]/g)?.length || 0) >= 2
@@ -75,7 +83,7 @@ export class CompanyMatcher {
       // These identifiers belong to each site's own namespace. A Saramin csn
       // and a Jobkorea memsysno cannot establish equality or inequality.
       const confidence = warningConfidence(posting, record.platform === posting.platform ? record : { ...record, companyIdentifier: undefined })
-      if (confidence !== "none") results.push({ record, confidence, reason: confidence === "exact" ? "기업 식별자 또는 엄격한 이름 일치 · 동명이사 가능성 확인 필요" : "법인 표기·띄어쓰기·한영 병기를 정리한 이름 일치 · 동일 기업인지 확인 필요" })
+      if (confidence !== "none") results.push({ record, confidence, reason: confidence === "exact" ? "기업 식별자 또는 엄격한 이름 일치 · 동명이사 가능성 확인 필요" : "법인 표기·띄어쓰기·한영 병기·등록된 서비스명 별칭의 이름 일치 · 동일 기업인지 확인 필요" })
     }
     if (similar && name.length >= 3) {
       this.fuzzy ||= new Fuse(this.records, { keys: ["normalizedCompanyName"], threshold: 0.25, ignoreLocation: true, minMatchCharLength: 3 })
