@@ -4,6 +4,17 @@ import { normalizeCompanyName } from "../../src/core/company"
 import { record } from "../helpers"
 
 describe("통합검색의 로컬 지원 기업 비교", () => {
+  it("회사·서비스명 병기도 양방향으로 완료 이력을 찾고 저장 이름은 유지한다", () => {
+    const records = [
+      record({ id: "base", companyName: "(주)워시스왓", jobTitle: "Frontend Engineer", appliedAt: "2026-11-01" }),
+      record({ id: "service", platform: "wanted", companyName: "워시스왓(세탁특공대)", appliedAt: "2026-11-04" }),
+      record({ id: "pending", companyName: "워시스왓(세탁특공대)", status: "pending_confirmation" })
+    ]
+    const before = structuredClone(records), index = applicationHistoryIndex(records)
+    for (const name of ["㈜워시스왓", "워시스왓(세탁특공대)"]) expect(index.get(searchCompanyNameKey(name))?.map(record => record.id)).toEqual(["service", "base"])
+    expect(index.has(searchCompanyNameKey("워시스왓(부산지점)"))).toBe(false)
+    expect(records).toEqual(before)
+  })
   it("사이트·법인 표기가 달라도 완료된 지원만 묶고 최신 지원부터 보여준다", () => {
     const records = [
       record({ id: "old", platform: "saramin", companyName: "(주)예시 회사", appliedAt: "2026-09-01" }),
